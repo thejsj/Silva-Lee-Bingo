@@ -5,6 +5,7 @@ import BingoBoard from "./bingo-board"
 
 interface FinishScreenProps {
   userName: string
+  userId: string
   finalClues: Clue[]
   completedClues: { [key: string]: string }
   bingoLine: number[] | null
@@ -14,6 +15,7 @@ interface FinishScreenProps {
 
 export default function FinishScreen({
   userName,
+  userId,
   finalClues,
   completedClues,
   bingoLine,
@@ -21,7 +23,7 @@ export default function FinishScreen({
   selectedClueIndex,
 }: FinishScreenProps) {
   return (
-    <div className="flex flex-col items-center justify-center p-4 text-center">
+    <div className="flex flex-col items-center justify-center p-4 text-center w-full">
       <h1 className="text-4xl font-bold text-white mb-2">Silva Lee Bingo</h1>
 
       <div className="flex items-center justify-center mb-6">
@@ -49,6 +51,10 @@ export default function FinishScreen({
       />
 
       <p className="text-white text-lg mt-4">Congratulations {userName}! Click on any square to view your photos.</p>
+
+      <div className="mt-4 text-xs text-white/70 text-center">
+        {userName} • ID: {userId}
+      </div>
     </div>
   )
 }

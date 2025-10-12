@@ -20,6 +20,7 @@ export default function App() {
   const [isSupabaseConfigured, setIsSupabaseConfigured] = useState(false)
   const [gameState, setGameState] = useState<GameState>("loading")
   const [userName, setUserName] = useState<string | null>(null)
+  const [userId, setUserId] = useState<string | null>(null)
   const [allRawClues, setAllRawClues] = useState<Omit<Clue, "id" | "photoUrl">[]>([])
   const [bingoClues, setBingoClues] = useState<Clue[]>([]) // 25 clues for the board
   const [completedClues, setCompletedClues] = useState<{ [key: string]: string }>({}) // clue.id -> photoUrl
@@ -48,11 +49,13 @@ export default function App() {
     if (allRawClues.length === 0) return // Wait for clues.json to load
 
     const storedName = localStorage.getItem("bingoUserName")
+    const storedUserId = localStorage.getItem("bingoUserId")
     const storedClues = localStorage.getItem("bingoBoardClues")
     const storedCompleted = localStorage.getItem("bingoCompletedClues")
 
-    if (storedName && storedClues) {
+    if (storedName && storedUserId && storedClues) {
       setUserName(storedName)
+      setUserId(storedUserId)
       const parsedClues: Clue[] = JSON.parse(storedClues)
       setBingoClues(parsedClues)
       if (storedCompleted) {
@@ -67,14 +70,16 @@ export default function App() {
     }
   }, [allRawClues])
 
-  const handleNameSubmit = (name: string) => {
+  const handleNameSubmit = (name: string, userId: string) => {
     const initialBoardClues = getInitialClues(allRawClues, 25)
     setUserName(name)
+    setUserId(userId)
     setBingoClues(initialBoardClues)
     setCompletedClues({}) // Reset completed clues
     setBingoLine(null) // Reset bingo line
 
     localStorage.setItem("bingoUserName", name)
+    localStorage.setItem("bingoUserId", userId)
     localStorage.setItem("bingoBoardClues", JSON.stringify(initialBoardClues))
     localStorage.removeItem("bingoCompletedClues") // Clear old completed ones
     setGameState("playing")
@@ -104,7 +109,7 @@ export default function App() {
   const BUCKET_NAME = "silva-lee-bingo"
 
   const handlePhotoUpload = async (file: File, clueId: string) => {
-    if (!userName) return
+    if (!userName || !userId) return
     if (!supabase) {
       alert("Supabase is not configured. Photo upload is disabled.")
       setIsUploading(false)
@@ -125,6 +130,22 @@ export default function App() {
       } = supabase.storage.from(BUCKET_NAME).getPublicUrl(filePath)
 
       if (!publicUrl) throw new Error("Could not get public URL for uploaded photo.")
+
+      // Find the clue to get emoji and description
+      const clue = bingoClues.find((c) => c.id === clueId)
+      if (!clue) throw new Error("Clue not found")
+
+      // Insert into photo_submissions table
+      const { error: insertError } = await supabase.from("photo_submissions").insert([
+        {
+          user_id: userId,
+          photo_url: publicUrl,
+          clue_text: clue.description,
+          clue_emoji: clue.emoji,
+        },
+      ])
+
+      if (insertError) throw insertError
 
       setCompletedClues((prev) => {
         const newCompleted = { ...prev, [clueId]: publicUrl }
@@ -214,6 +235,7 @@ export default function App() {
       <div className="flex flex-col items-center justify-start min-h-screen p-4 bg-bingo-green-dark">
         <FinishScreen
           userName={userName!}
+          userId={userId!}
           finalClues={bingoClues}
           completedClues={completedClues}
           bingoLine={bingoLine}
@@ -300,6 +322,10 @@ export default function App() {
           </ol>
         </div>
       )}
+
+      <div className="mt-auto pt-4 pb-2 text-xs text-bingo-green-dark/70 text-center">
+        {userName} • ID: {userId}
+      </div>
     </div>
   )
 }
