@@ -5,6 +5,7 @@ type TabType = "board" | "settings"
 type GameStateType = "pending" | "active" | "finished"
 type LeaderboardEntry = {
   user_id: string
+  name: string
   submission_count: number
 }
 type PhotoSubmission = {
@@ -177,9 +178,28 @@ function App() {
         leaderboardMap.set(submission.user_id, count + 1)
       })
 
+      // Fetch user names
+      const userIds = Array.from(leaderboardMap.keys())
+      const { data: users, error: usersError } = await supabase
+        .from("users")
+        .select("id, name")
+        .in("id", userIds)
+
+      if (usersError) throw usersError
+
+      // Create a map of user_id to name
+      const userNameMap = new Map<string, string>()
+      users?.forEach((user) => {
+        userNameMap.set(user.id, user.name)
+      })
+
       // Convert to array and sort by submission count
       const leaderboardArray: LeaderboardEntry[] = Array.from(leaderboardMap.entries())
-        .map(([user_id, submission_count]) => ({ user_id, submission_count }))
+        .map(([user_id, submission_count]) => ({
+          user_id,
+          name: userNameMap.get(user_id) || user_id,
+          submission_count,
+        }))
         .sort((a, b) => b.submission_count - a.submission_count)
 
       setLeaderboard(leaderboardArray)
@@ -355,7 +375,7 @@ function App() {
                     {leaderboard.map((entry, index) => (
                       <li key={entry.user_id} className="flex justify-between items-center">
                         <span className="text-gray-800">
-                          {index + 1}. {entry.user_id}
+                          {index + 1}. {entry.name}
                         </span>
                         <span className="font-semibold text-green-600">{entry.submission_count}</span>
                       </li>
