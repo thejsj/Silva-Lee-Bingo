@@ -352,16 +352,35 @@ function App() {
               {photos.length === 0 ? (
                 <p className="text-gray-600">No photos yet</p>
               ) : (
-                <div className="grid grid-cols-4">
-                  {photos.map((photo) => (
-                    <div key={photo.id} className="aspect-square overflow-hidden">
-                      <img
-                        src={photo.photo_url}
-                        alt={`Submission by ${photo.user_id}`}
-                        className="w-full h-full object-cover"
-                      />
+                <div>
+                  {/* First 2 rows: 4 pictures per row */}
+                  {photos.slice(0, 8).length > 0 && (
+                    <div className="grid grid-cols-4">
+                      {photos.slice(0, 8).map((photo) => (
+                        <div key={photo.id} className="aspect-square overflow-hidden">
+                          <img
+                            src={photo.photo_url}
+                            alt={`Submission by ${photo.user_id}`}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  )}
+                  {/* Remaining rows: 6 pictures per row */}
+                  {photos.slice(8).length > 0 && (
+                    <div className="grid grid-cols-6">
+                      {photos.slice(8).map((photo) => (
+                        <div key={photo.id} className="aspect-square overflow-hidden">
+                          <img
+                            src={photo.photo_url}
+                            alt={`Submission by ${photo.user_id}`}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
