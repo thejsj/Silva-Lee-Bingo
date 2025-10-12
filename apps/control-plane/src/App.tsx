@@ -3,6 +3,16 @@ import { supabase } from "./lib/supabase-client"
 
 type TabType = "board" | "settings"
 type GameStateType = "pending" | "active" | "finished"
+type LeaderboardEntry = {
+  user_id: string
+  submission_count: number
+}
+type PhotoSubmission = {
+  id: string
+  user_id: string
+  photo_url: string
+  created_at: string
+}
 
 function App() {
   const [activeTab, setActiveTab] = useState<TabType>("board")
@@ -12,6 +22,8 @@ function App() {
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
+  const [photos, setPhotos] = useState<PhotoSubmission[]>([])
 
   // Load initial game state
   useEffect(() => {
@@ -53,6 +65,43 @@ function App() {
       supabase.removeChannel(usersChannel)
       supabase.removeChannel(photoSubmissionsChannel)
       supabase.removeChannel(gameStateChannel)
+    }
+  }, [])
+
+  // Set up leaderboard refresh every 10 seconds
+  useEffect(() => {
+    if (!supabase) return
+
+    // Load initial leaderboard
+    loadLeaderboard()
+
+    // Set up interval to refresh every 10 seconds
+    const intervalId = setInterval(() => {
+      loadLeaderboard()
+    }, 10000)
+
+    return () => {
+      clearInterval(intervalId)
+    }
+  }, [])
+
+  // Set up realtime listener for photo submissions
+  useEffect(() => {
+    if (!supabase) return
+
+    // Load initial photos
+    loadPhotos()
+
+    // Subscribe to photo_submissions changes
+    const photosChannel = supabase
+      .channel("photos-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "photo_submissions" }, () => {
+        loadPhotos()
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(photosChannel)
     }
   }, [])
 
@@ -107,6 +156,51 @@ function App() {
       setPhotoSubmissionCount(count || 0)
     } catch (error) {
       console.error("Error loading photo submission count:", error)
+    }
+  }
+
+  const loadLeaderboard = async () => {
+    if (!supabase) return
+
+    try {
+      const { data, error } = await supabase
+        .from("photo_submissions")
+        .select("user_id")
+        .order("user_id")
+
+      if (error) throw error
+
+      // Group by user_id and count submissions
+      const leaderboardMap = new Map<string, number>()
+      data?.forEach((submission) => {
+        const count = leaderboardMap.get(submission.user_id) || 0
+        leaderboardMap.set(submission.user_id, count + 1)
+      })
+
+      // Convert to array and sort by submission count
+      const leaderboardArray: LeaderboardEntry[] = Array.from(leaderboardMap.entries())
+        .map(([user_id, submission_count]) => ({ user_id, submission_count }))
+        .sort((a, b) => b.submission_count - a.submission_count)
+
+      setLeaderboard(leaderboardArray)
+    } catch (error) {
+      console.error("Error loading leaderboard:", error)
+    }
+  }
+
+  const loadPhotos = async () => {
+    if (!supabase) return
+
+    try {
+      const { data, error } = await supabase
+        .from("photo_submissions")
+        .select("id, user_id, photo_url, created_at")
+        .order("created_at", { ascending: false })
+
+      if (error) throw error
+      setPhotos(data || [])
+    } catch (error) {
+      console.error("Error loading photos:", error)
     }
   }
 
@@ -187,7 +281,7 @@ function App() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-100">
+      <div className="flex items-center justify-center min-h-screen">
         <div className="text-xl">Loading...</div>
       </div>
     )
@@ -195,7 +289,7 @@ function App() {
 
   if (!supabase) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-100">
+      <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <h2 className="text-2xl font-bold text-red-600 mb-2">Supabase Not Configured</h2>
           <p className="text-lg">Please configure Supabase to use this control plane.</p>
@@ -205,25 +299,25 @@ function App() {
   }
 
   return (
-    <div className="flex flex-col h-screen w-screen bg-gray-100">
+    <div className="flex flex-col h-screen w-screen">
       {/* Tab Navigation */}
-      <div className="flex border-b border-gray-300 bg-white shadow-sm">
+      <div className="flex border-b border-gray-300 shadow-sm">
         <button
           onClick={() => setActiveTab("board")}
-          className={`flex-1 px-6 py-4 text-lg font-semibold transition-colors ${
+          className={`px-[10px] py-[10px] mx-[5px] text-[10px] font-semibold transition-colors border-b-2 ${
             activeTab === "board"
-              ? "bg-blue-500 text-white border-b-4 border-blue-700"
-              : "bg-white text-gray-700 hover:bg-gray-100"
+              ? "border-green-500"
+              : "border-transparent"
           }`}
         >
           Board
         </button>
         <button
           onClick={() => setActiveTab("settings")}
-          className={`flex-1 px-6 py-4 text-lg font-semibold transition-colors ${
+          className={`px-[10px] py-[10px] mx-[5px] text-[10px] font-semibold transition-colors border-b-2 ${
             activeTab === "settings"
-              ? "bg-blue-500 text-white border-b-4 border-blue-700"
-              : "bg-white text-gray-700 hover:bg-gray-100"
+              ? "border-green-500"
+              : "border-transparent"
           }`}
         >
           Settings
@@ -231,12 +325,44 @@ function App() {
       </div>
 
       {/* Tab Content */}
-      <div className="flex-1 overflow-auto p-6">
+      <div className="flex-1 overflow-auto">
         {activeTab === "board" && (
-          <div className="max-w-4xl mx-auto">
-            <h2 className="text-3xl font-bold mb-6 text-gray-800">Board View</h2>
-            <div className="bg-white rounded-lg shadow p-6">
-              <p className="text-gray-600">Board content coming soon...</p>
+          <div className="flex w-full h-full gap-6">
+            <div className="flex-1">
+              {photos.length === 0 ? (
+                <p className="text-gray-600">No photos yet</p>
+              ) : (
+                <div className="grid grid-cols-4">
+                  {photos.map((photo) => (
+                    <div key={photo.id} className="aspect-square overflow-hidden">
+                      <img
+                        src={photo.photo_url}
+                        alt={`Submission by ${photo.user_id}`}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="w-[400px] p-6">
+              <h2 className="text-2xl font-bold mb-6 text-gray-800">Leaderboard</h2>
+              <div className="bg-white rounded-lg shadow p-6">
+                {leaderboard.length === 0 ? (
+                  <p className="text-gray-600">No submissions yet</p>
+                ) : (
+                  <ol className="space-y-2">
+                    {leaderboard.map((entry, index) => (
+                      <li key={entry.user_id} className="flex justify-between items-center">
+                        <span className="text-gray-800">
+                          {index + 1}. {entry.user_id}
+                        </span>
+                        <span className="font-semibold text-green-600">{entry.submission_count}</span>
+                      </li>
+                    ))}
+                  </ol>
+                )}
+              </div>
             </div>
           </div>
         )}
