@@ -1,5 +1,3 @@
-"use client"
-
 import { useState, useEffect } from "react"
 import NameInputForm from "@/components/name-input-form"
 import BingoBoard from "@/components/bingo-board"
@@ -18,7 +16,7 @@ const Logo = () => (
   </div>
 )
 
-export default function BingoPage() {
+export default function App() {
   const [isSupabaseConfigured, setIsSupabaseConfigured] = useState(false)
   const [gameState, setGameState] = useState<GameState>("loading")
   const [userName, setUserName] = useState<string | null>(null)

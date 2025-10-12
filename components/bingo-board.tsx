@@ -1,7 +1,4 @@
-"use client"
-
 import type { Clue } from "@/lib/utils"
-import Image from "next/image"
 
 interface BingoBoardProps {
   clues: Clue[]
@@ -64,12 +61,10 @@ export default function BingoBoard({
             >
               {photoUrl ? (
                 <div className="relative w-full h-full">
-                  <Image
+                  <img
                     src={photoUrl || "/placeholder.svg"}
                     alt={`Photo for ${clue.description}`}
-                    fill
-                    className="object-cover rounded opacity-50"
-                    sizes="(max-width: 768px) 20vw, 15vw"
+                    className="absolute inset-0 w-full h-full object-cover rounded opacity-50"
                   />
                   <div className="absolute inset-0 flex items-center justify-center">
                     <span className="text-2xl drop-shadow-lg">{clue.emoji}</span>

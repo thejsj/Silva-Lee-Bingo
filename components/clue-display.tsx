@@ -1,11 +1,8 @@
-"use client"
-
 import type React from "react"
 
 import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import type { Clue } from "@/lib/utils"
-import Image from "next/image"
 
 interface ClueDisplayProps {
   clue: Clue
@@ -75,13 +72,11 @@ export default function ClueDisplay({
 
       {previewUrl && (
         <div className="relative w-full max-w-sm mx-auto aspect-square mb-4 rounded-lg overflow-hidden shadow-lg">
-          <Image
+          <img
             key={previewUrl}
             src={previewUrl || "/placeholder.svg"}
             alt="Uploaded photo"
-            fill
-            className="object-cover"
-            sizes="(max-width: 768px) 90vw, 400px"
+            className="w-full h-full object-cover"
           />
         </div>
       )}
