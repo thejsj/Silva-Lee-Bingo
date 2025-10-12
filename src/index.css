@@ -2,8 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+  font-family: 'Krungthep';
+  src: url('/krungthep.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: 'Krungthep', system-ui, -apple-system, sans-serif;
 }
 
 @layer base {
