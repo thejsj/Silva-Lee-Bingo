@@ -8,9 +8,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "shared-styles": "workspace:*",
+    "@supabase/supabase-js": "^2.75.0",
     "react": "^19",
-    "react-dom": "^19"
+    "react-dom": "^19",
+    "shared-styles": "workspace:*"
   },
   "devDependencies": {
     "@types/react": "^19",
