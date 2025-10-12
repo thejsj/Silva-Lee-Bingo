@@ -5,17 +5,26 @@ import type React from "react"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import type { GlobalGameState } from "@/hooks/use-game-state"
 
 interface NameInputFormProps {
   onSubmit: (name: string, userId: string) => void
+  globalGameState: GlobalGameState | null
 }
 
-export default function NameInputForm({ onSubmit }: NameInputFormProps) {
+export default function NameInputForm({ onSubmit, globalGameState }: NameInputFormProps) {
   const [name, setName] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    // Check if game state allows name submission
+    if (globalGameState === "finished") {
+      alert("The game has ended. You can no longer join.")
+      return
+    }
+
     if (name.trim() && !isSubmitting) {
       setIsSubmitting(true)
       try {

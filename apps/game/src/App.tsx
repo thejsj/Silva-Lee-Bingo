@@ -3,9 +3,13 @@ import NameInputForm from "@/components/name-input-form"
 import BingoBoard from "@/components/bingo-board"
 import ClueDisplay from "@/components/clue-display"
 import FinishScreen from "@/components/finish-screen"
+import PendingScreen from "@/components/pending-screen"
+import GameOverScreen from "@/components/game-over-screen"
+import GameClosedScreen from "@/components/game-closed-screen"
 import { Button } from "@/components/ui/button"
 import { supabase } from "@/lib/supabase-client"
 import { type Clue, getInitialClues, checkForBingo } from "@/lib/utils"
+import { useGameState } from "@/hooks/use-game-state"
 
 type GameState = "loading" | "name_input" | "playing" | "clue_view" | "finished"
 
@@ -27,6 +31,9 @@ export default function App() {
   const [selectedClueIndex, setSelectedClueIndex] = useState<number | null>(null)
   const [bingoLine, setBingoLine] = useState<number[] | null>(null)
   const [isUploading, setIsUploading] = useState(false)
+
+  // Global game state from Supabase
+  const { globalGameState, isLoading: isGameStateLoading, error: gameStateError } = useGameState()
 
   useEffect(() => {
     if (supabase) {
@@ -113,6 +120,11 @@ export default function App() {
     if (!supabase) {
       alert("Supabase is not configured. Photo upload is disabled.")
       setIsUploading(false)
+      return
+    }
+    // Prevent photo uploads if game is finished
+    if (globalGameState === "finished") {
+      alert("The game has ended. Photo submissions are no longer allowed.")
       return
     }
     setIsUploading(true)
@@ -220,12 +232,39 @@ export default function App() {
     }
   }
 
-  if (gameState === "loading" || allRawClues.length === 0) {
+  // Show error if game state couldn't be loaded
+  if (gameStateError) {
+    return (
+      <div className="flex items-center justify-center min-h-screen text-center p-4">
+        <div>
+          <h2 className="text-2xl font-bold text-red-600 mb-2">Error Loading Game</h2>
+          <p className="text-lg">{gameStateError}</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (gameState === "loading" || allRawClues.length === 0 || isGameStateLoading) {
     return <div className="flex items-center justify-center min-h-screen text-2xl">Loading Game...</div>
   }
 
+  // Handle game state "finished" - users who didn't join
+  if (globalGameState === "finished" && !userName && !userId) {
+    return <GameClosedScreen />
+  }
+
+  // Handle game state "finished" - users who joined
+  if (globalGameState === "finished" && userName && userId) {
+    return <GameOverScreen userName={userName} userId={userId} />
+  }
+
+  // Handle game state "pending" - users who joined
+  if (globalGameState === "pending" && userName && userId) {
+    return <PendingScreen userName={userName} userId={userId} />
+  }
+
   if (gameState === "name_input") {
-    return <NameInputForm onSubmit={handleNameSubmit} />
+    return <NameInputForm onSubmit={handleNameSubmit} globalGameState={globalGameState} />
   }
 
   if (gameState === "finished") {
