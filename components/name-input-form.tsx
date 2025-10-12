@@ -7,16 +7,42 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 
 interface NameInputFormProps {
-  onSubmit: (name: string) => void
+  onSubmit: (name: string, userId: string) => void
 }
 
 export default function NameInputForm({ onSubmit }: NameInputFormProps) {
   const [name, setName] = useState("")
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (name.trim()) {
-      onSubmit(name.trim())
+    if (name.trim() && !isSubmitting) {
+      setIsSubmitting(true)
+      try {
+        const { supabase } = await import("@/lib/supabase-client")
+
+        if (!supabase) {
+          // Fallback if Supabase is not configured
+          const fallbackId = `local-${Date.now()}`
+          onSubmit(name.trim(), fallbackId)
+          return
+        }
+
+        // Insert user into Supabase
+        const { data, error } = await supabase
+          .from("users")
+          .insert([{ name: name.trim() }])
+          .select()
+          .single()
+
+        if (error) throw error
+
+        onSubmit(data.name, data.id)
+      } catch (error) {
+        console.error("Error creating user:", error)
+        alert("Failed to create user. Please try again.")
+        setIsSubmitting(false)
+      }
     }
   }
 
@@ -45,7 +71,7 @@ export default function NameInputForm({ onSubmit }: NameInputFormProps) {
 
         <Button
           type="submit"
-          disabled={!name.trim()}
+          disabled={!name.trim() || isSubmitting}
           className="w-full bg-bingo-green-button hover:bg-bingo-green-button/90 text-white text-xl py-4 flex items-center justify-center"
         >
           <span role="img" aria-label="start" className="mr-3 text-2xl">
