@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { supabase } from "./lib/supabase-client"
 
 type TabType = "board" | "settings"
@@ -25,6 +25,7 @@ function App() {
   const [isDeleting, setIsDeleting] = useState(false)
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
   const [photos, setPhotos] = useState<PhotoSubmission[]>([])
+  const leaderboardTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   // Load initial game state
   useEffect(() => {
@@ -69,21 +70,23 @@ function App() {
     }
   }, [])
 
-  // Set up leaderboard refresh every 10 seconds
+  // Debounced leaderboard refresh function
+  const debouncedLoadLeaderboard = useCallback(() => {
+    // Clear any existing timer
+    if (leaderboardTimerRef.current) {
+      clearTimeout(leaderboardTimerRef.current)
+    }
+
+    // Set a new timer to refresh leaderboard after 500ms
+    leaderboardTimerRef.current = setTimeout(() => {
+      loadLeaderboard()
+    }, 500)
+  }, [])
+
+  // Load initial leaderboard
   useEffect(() => {
     if (!supabase) return
-
-    // Load initial leaderboard
     loadLeaderboard()
-
-    // Set up interval to refresh every 10 seconds
-    const intervalId = setInterval(() => {
-      loadLeaderboard()
-    }, 10000)
-
-    return () => {
-      clearInterval(intervalId)
-    }
   }, [])
 
   // Set up realtime listener for photo submissions
@@ -98,13 +101,18 @@ function App() {
       .channel("photos-realtime")
       .on("postgres_changes", { event: "*", schema: "public", table: "photo_submissions" }, () => {
         loadPhotos()
+        debouncedLoadLeaderboard()
       })
       .subscribe()
 
     return () => {
       supabase.removeChannel(photosChannel)
+      // Clear any pending leaderboard refresh timer
+      if (leaderboardTimerRef.current) {
+        clearTimeout(leaderboardTimerRef.current)
+      }
     }
-  }, [])
+  }, [debouncedLoadLeaderboard])
 
   const loadGameState = async () => {
     if (!supabase) {
