@@ -346,7 +346,7 @@ function App() {
               )}
             </div>
             <div className="w-[400px] p-6">
-              <h2 className="text-2xl font-bold mb-6 text-gray-800">Leaderboard</h2>
+              <h2 className="text-xl font-bold mb-2 text-gray-800">Leaderboard</h2>
               <div className="bg-white rounded-lg shadow p-6">
                 {leaderboard.length === 0 ? (
                   <p className="text-gray-600">No submissions yet</p>
