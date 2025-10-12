@@ -51,6 +51,36 @@ export default function App() {
       .catch(console.error)
   }, [])
 
+  // Load user's photo submissions from database
+  const loadPhotoSubmissions = async (userId: string, clues: Clue[]) => {
+    if (!supabase) return {}
+
+    try {
+      const { data, error } = await supabase
+        .from("photo_submissions")
+        .select("*")
+        .eq("user_id", userId)
+
+      if (error) throw error
+
+      // Match photo submissions to clues based on clue text
+      const completed: { [key: string]: string } = {}
+      if (data) {
+        data.forEach((submission: any) => {
+          const matchingClue = clues.find((c) => c.description === submission.clue_text)
+          if (matchingClue) {
+            completed[matchingClue.id] = submission.photo_url
+          }
+        })
+      }
+
+      return completed
+    } catch (error) {
+      console.error("Error loading photo submissions:", error)
+      return {}
+    }
+  }
+
   // Initialize game from local storage or set to name_input
   useEffect(() => {
     if (allRawClues.length === 0) return // Wait for clues.json to load
@@ -58,19 +88,20 @@ export default function App() {
     const storedName = localStorage.getItem("bingoUserName")
     const storedUserId = localStorage.getItem("bingoUserId")
     const storedClues = localStorage.getItem("bingoBoardClues")
-    const storedCompleted = localStorage.getItem("bingoCompletedClues")
 
     if (storedName && storedUserId && storedClues) {
       setUserName(storedName)
       setUserId(storedUserId)
       const parsedClues: Clue[] = JSON.parse(storedClues)
       setBingoClues(parsedClues)
-      if (storedCompleted) {
-        const parsedCompleted: { [key: string]: string } = JSON.parse(storedCompleted)
-        setCompletedClues(parsedCompleted)
-        const line = checkForBingo(parsedCompleted, parsedClues)
+
+      // Load photo submissions from database
+      loadPhotoSubmissions(storedUserId, parsedClues).then((completed) => {
+        setCompletedClues(completed)
+        const line = checkForBingo(completed, parsedClues)
         setBingoLine(line)
-      }
+      })
+
       setGameState("playing")
     } else {
       setGameState("name_input")
@@ -88,7 +119,6 @@ export default function App() {
     localStorage.setItem("bingoUserName", name)
     localStorage.setItem("bingoUserId", userId)
     localStorage.setItem("bingoBoardClues", JSON.stringify(initialBoardClues))
-    localStorage.removeItem("bingoCompletedClues") // Clear old completed ones
     setGameState("playing")
   }
 
@@ -161,7 +191,6 @@ export default function App() {
 
       setCompletedClues((prev) => {
         const newCompleted = { ...prev, [clueId]: publicUrl }
-        localStorage.setItem("bingoCompletedClues", JSON.stringify(newCompleted))
         const line = checkForBingo(newCompleted, bingoClues)
         setBingoLine(line)
         return newCompleted
