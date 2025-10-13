@@ -33,7 +33,7 @@ export default function GameOverScreen({ userName, userId }: GameOverScreenProps
         const { count: bingoSubmissions, error: bingoError } = await supabase
           .from("bingo_submissions")
           .select("*", { count: "exact", head: true })
-          .eq("user_name", userName)
+          .eq("user_id", userId)
 
         if (bingoError) throw bingoError
 

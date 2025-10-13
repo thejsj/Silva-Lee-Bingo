@@ -215,34 +215,20 @@ export default function App() {
       return
     }
 
-    const submissionClues = bingoLine.map((index) => {
+    const photoUrls = bingoLine.map((index) => {
       const clue = bingoClues[index]
-      return {
-        emoji: clue.emoji,
-        description: clue.description,
-        photo_url: completedClues[clue.id] || "N/A",
-      }
+      return completedClues[clue.id] || null
     })
 
     try {
       const { error } = await supabase.from("bingo_submissions").insert([
         {
-          user_name: userName,
-          clue1_emoji: submissionClues[0].emoji,
-          clue1_description: submissionClues[0].description,
-          clue1_photo_url: submissionClues[0].photo_url,
-          clue2_emoji: submissionClues[1].emoji,
-          clue2_description: submissionClues[1].description,
-          clue2_photo_url: submissionClues[1].photo_url,
-          clue3_emoji: submissionClues[2].emoji,
-          clue3_description: submissionClues[2].description,
-          clue3_photo_url: submissionClues[2].photo_url,
-          clue4_emoji: submissionClues[3].emoji,
-          clue4_description: submissionClues[3].description,
-          clue4_photo_url: submissionClues[3].photo_url,
-          clue5_emoji: submissionClues[4].emoji,
-          clue5_description: submissionClues[4].description,
-          clue5_photo_url: submissionClues[4].photo_url,
+          user_id: userId,
+          photo_submission_1: photoUrls[0],
+          photo_submission_2: photoUrls[1],
+          photo_submission_3: photoUrls[2],
+          photo_submission_4: photoUrls[3],
+          photo_submission_5: photoUrls[4],
         },
       ])
       if (error) throw error
