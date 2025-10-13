@@ -217,6 +217,8 @@ export default function App() {
   }
 
   const handleImDone = async () => {
+    console.log("handleImDone called", { userName, bingoLine, bingoLineLength: bingoLine?.length })
+
     if (!userName || !bingoLine || bingoLine.length !== 5) {
       alert("Bingo not yet achieved or error in submission.")
       return
@@ -230,6 +232,9 @@ export default function App() {
       const clue = bingoClues[index]
       return photoSubmissionIds[clue.id] || null
     })
+
+    console.log("Submitting bingo with IDs:", submissionIds)
+    console.log("Photo submission IDs state:", photoSubmissionIds)
 
     try {
       const { error } = await supabase.from("bingo_submissions").insert([
