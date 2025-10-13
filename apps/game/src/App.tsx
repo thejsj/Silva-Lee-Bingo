@@ -28,6 +28,7 @@ export default function App() {
   const [allRawClues, setAllRawClues] = useState<Omit<Clue, "id" | "photoUrl">[]>([])
   const [bingoClues, setBingoClues] = useState<Clue[]>([]) // 25 clues for the board
   const [completedClues, setCompletedClues] = useState<{ [key: string]: string }>({}) // clue.id -> photoUrl
+  const [photoSubmissionIds, setPhotoSubmissionIds] = useState<{ [key: string]: number }>({}) // clue.id -> submission ID
   const [selectedClueIndex, setSelectedClueIndex] = useState<number | null>(null)
   const [bingoLine, setBingoLine] = useState<number[] | null>(null)
   const [isUploading, setIsUploading] = useState(false)
@@ -53,7 +54,7 @@ export default function App() {
 
   // Load user's photo submissions from database
   const loadPhotoSubmissions = async (userId: string, clues: Clue[]) => {
-    if (!supabase) return {}
+    if (!supabase) return { completed: {}, submissionIds: {} }
 
     try {
       const { data, error } = await supabase
@@ -65,19 +66,21 @@ export default function App() {
 
       // Match photo submissions to clues based on clue text
       const completed: { [key: string]: string } = {}
+      const submissionIds: { [key: string]: number } = {}
       if (data) {
         data.forEach((submission: any) => {
           const matchingClue = clues.find((c) => c.description === submission.clue_text)
           if (matchingClue) {
             completed[matchingClue.id] = submission.photo_url
+            submissionIds[matchingClue.id] = submission.id
           }
         })
       }
 
-      return completed
+      return { completed, submissionIds }
     } catch (error) {
       console.error("Error loading photo submissions:", error)
-      return {}
+      return { completed: {}, submissionIds: {} }
     }
   }
 
@@ -96,8 +99,9 @@ export default function App() {
       setBingoClues(parsedClues)
 
       // Load photo submissions from database
-      loadPhotoSubmissions(storedUserId, parsedClues).then((completed) => {
+      loadPhotoSubmissions(storedUserId, parsedClues).then(({ completed, submissionIds }) => {
         setCompletedClues(completed)
+        setPhotoSubmissionIds(submissionIds)
         const line = checkForBingo(completed, parsedClues)
         setBingoLine(line)
       })
@@ -177,17 +181,23 @@ export default function App() {
       const clue = bingoClues.find((c) => c.id === clueId)
       if (!clue) throw new Error("Clue not found")
 
-      // Insert into photo_submissions table
-      const { error: insertError } = await supabase.from("photo_submissions").insert([
-        {
-          user_id: userId,
-          photo_url: publicUrl,
-          clue_text: clue.description,
-          clue_emoji: clue.emoji,
-        },
-      ])
+      // Insert into photo_submissions table and get the ID
+      const { data: insertData, error: insertError } = await supabase
+        .from("photo_submissions")
+        .insert([
+          {
+            user_id: userId,
+            photo_url: publicUrl,
+            clue_text: clue.description,
+            clue_emoji: clue.emoji,
+          },
+        ])
+        .select()
 
       if (insertError) throw insertError
+      if (!insertData || insertData.length === 0) throw new Error("Failed to get submission ID")
+
+      const submissionId = insertData[0].id
 
       setCompletedClues((prev) => {
         const newCompleted = { ...prev, [clueId]: publicUrl }
@@ -195,6 +205,7 @@ export default function App() {
         setBingoLine(line)
         return newCompleted
       })
+      setPhotoSubmissionIds((prev) => ({ ...prev, [clueId]: submissionId }))
       setGameState("playing") // Go back to board view
       setSelectedClueIndex(null)
     } catch (error) {
@@ -215,20 +226,20 @@ export default function App() {
       return
     }
 
-    const photoUrls = bingoLine.map((index) => {
+    const submissionIds = bingoLine.map((index) => {
       const clue = bingoClues[index]
-      return completedClues[clue.id] || null
+      return photoSubmissionIds[clue.id] || null
     })
 
     try {
       const { error } = await supabase.from("bingo_submissions").insert([
         {
           user_id: userId,
-          photo_submission_1: photoUrls[0],
-          photo_submission_2: photoUrls[1],
-          photo_submission_3: photoUrls[2],
-          photo_submission_4: photoUrls[3],
-          photo_submission_5: photoUrls[4],
+          photo_submission_1: submissionIds[0],
+          photo_submission_2: submissionIds[1],
+          photo_submission_3: submissionIds[2],
+          photo_submission_4: submissionIds[3],
+          photo_submission_5: submissionIds[4],
         },
       ])
       if (error) throw error
