@@ -21,22 +21,22 @@ export default function BingoBoard({
     <div className="w-[360px] mx-auto">
       {bingoLine && (
         <div className="grid grid-cols-5 gap-1 mb-2">
-          {bingoLetters.map((letter, index) => (
-            <div
-              key={index}
-              className={`text-center text-2xl font-bold py-2 ${
-                bingoLine.includes(index) ||
-                bingoLine.includes(index + 5) ||
-                bingoLine.includes(index + 10) ||
-                bingoLine.includes(index + 15) ||
-                bingoLine.includes(index + 20)
-                  ? "text-bingo-green-button"
-                  : "text-transparent"
-              }`}
-            >
-              {letter}
-            </div>
-          ))}
+          {bingoLetters.map((letter, colIndex) => {
+            // Check if any cell in this column is part of the bingo line
+            const columnIndices = [colIndex, colIndex + 5, colIndex + 10, colIndex + 15, colIndex + 20]
+            const isHighlighted = columnIndices.some((cellIndex) => bingoLine.includes(cellIndex))
+
+            return (
+              <div
+                key={colIndex}
+                className={`text-center text-2xl font-bold py-2 ${
+                  isHighlighted ? "text-bingo-green-button" : "text-transparent"
+                }`}
+              >
+                {letter}
+              </div>
+            )
+          })}
         </div>
       )}
 
