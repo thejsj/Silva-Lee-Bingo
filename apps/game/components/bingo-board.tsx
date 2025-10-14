@@ -1,4 +1,5 @@
 import type { Clue } from "@/lib/utils"
+import { getAllBingoLines } from "@/lib/utils"
 
 interface BingoBoardProps {
   clues: Clue[]
@@ -17,28 +18,30 @@ export default function BingoBoard({
 }: BingoBoardProps) {
   const bingoLetters = ["B", "I", "N", "G", "O"]
 
+  // Get all bingo lines to determine which letters to highlight
+  const allBingoLines = getAllBingoLines(completedClues, clues)
+  const allBingoIndices = allBingoLines.flat()
+
   return (
     <div className="w-[360px] mx-auto">
-      {bingoLine && (
-        <div className="grid grid-cols-5 gap-1 mb-2">
-          {bingoLetters.map((letter, colIndex) => {
-            // Check if any cell in this column is part of the bingo line
-            const columnIndices = [colIndex, colIndex + 5, colIndex + 10, colIndex + 15, colIndex + 20]
-            const isHighlighted = columnIndices.some((cellIndex) => bingoLine.includes(cellIndex))
+      <div className="grid grid-cols-5 gap-1 mb-2">
+        {bingoLetters.map((letter, colIndex) => {
+          // Check if any cell in this column is part of any bingo line
+          const columnIndices = [colIndex, colIndex + 5, colIndex + 10, colIndex + 15, colIndex + 20]
+          const isHighlighted = columnIndices.some((cellIndex) => allBingoIndices.includes(cellIndex))
 
-            return (
-              <div
-                key={colIndex}
-                className={`text-center text-2xl font-bold py-2 ${
-                  isHighlighted ? "text-bingo-green-button" : "text-transparent"
-                }`}
-              >
-                {letter}
-              </div>
-            )
-          })}
-        </div>
-      )}
+          return (
+            <div
+              key={colIndex}
+              className={`text-center text-2xl font-bold py-2 ${
+                isHighlighted ? "text-bingo-green-button" : "text-transparent"
+              }`}
+            >
+              {letter}
+            </div>
+          )
+        })}
+      </div>
 
       <div className="grid grid-cols-5 gap-1 p-2 bg-bingo-green-dark rounded-md shadow-lg">
         {clues.map((clue, index) => {
