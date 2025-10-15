@@ -7,18 +7,25 @@ export function cn(...inputs: ClassValue[]) {
 
 export interface Clue {
   id: string
-  emoji: string
+  name: string
+  emojis: string[]
   description: string
-  name?: string
-  photoUrl?: string
+  selectedEmoji: string
 }
 
-export function getInitialClues(allClues: Omit<Clue, "id" | "photoUrl">[], count: number): Clue[] {
+export function getInitialClues(allClues: any[], count: number): Clue[] {
   const shuffled = [...allClues].sort(() => Math.random() - 0.5)
-  return shuffled.slice(0, count).map((clue, index) => ({
-    ...clue,
-    id: `clue-${index}`,
-  }))
+  return shuffled.slice(0, count).map((clue) => {
+    const emojis = clue.emojis.split(" ")
+    const selectedEmoji = emojis[Math.floor(Math.random() * emojis.length)]
+    return {
+      id: clue.id,
+      name: clue.name,
+      emojis: clue.emojis,
+      description: clue.description,
+      selectedEmoji: selectedEmoji,
+    }
+  })
 }
 
 export function checkForBingo(completedClues: { [key: string]: string }, bingoClues: Clue[]): number[] | null {

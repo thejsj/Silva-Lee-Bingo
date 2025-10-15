@@ -25,7 +25,7 @@ export default function NameInputForm({ onSubmit, globalGameState }: NameInputFo
 
   // Load all names from clues-final.json
   useEffect(() => {
-    fetch("/clues-final.json")
+    fetch("/clues.json")
       .then((res) => res.json())
       .then((data: ClueData[]) => {
         const names = data.map((clue) => clue.name).sort()

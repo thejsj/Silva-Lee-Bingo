@@ -6,7 +6,6 @@ import FinishScreen from "@/components/finish-screen"
 import PendingScreen from "@/components/pending-screen"
 import GameOverScreen from "@/components/game-over-screen"
 import GameClosedScreen from "@/components/game-closed-screen"
-import { Button } from "@/components/ui/button"
 import { supabase } from "@/lib/supabase-client"
 import { type Clue, getInitialClues, checkForBingo } from "@/lib/utils"
 import { useGameState } from "@/hooks/use-game-state"
@@ -25,7 +24,7 @@ export default function App() {
   const [gameState, setGameState] = useState<GameState>("loading")
   const [userName, setUserName] = useState<string | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
-  const [allRawClues, setAllRawClues] = useState<Omit<Clue, "id" | "photoUrl">[]>([])
+  const [allRawClues, setAllRawClues] = useState<any[]>([])
   const [bingoClues, setBingoClues] = useState<Clue[]>([]) // 25 clues for the board
   const [completedClues, setCompletedClues] = useState<{ [key: string]: string }>({}) // clue.id -> photoUrl
   const [photoSubmissionIds, setPhotoSubmissionIds] = useState<{ [key: string]: number }>({}) // clue.id -> submission ID
@@ -113,6 +112,7 @@ export default function App() {
   }, [allRawClues])
 
   const handleNameSubmit = (name: string, userId: string) => {
+    console.log("all raw clues", allRawClues)
     const initialBoardClues = getInitialClues(allRawClues, 25)
     setUserName(name)
     setUserId(userId)
@@ -189,7 +189,7 @@ export default function App() {
             user_id: userId,
             photo_url: publicUrl,
             clue_text: clue.description,
-            clue_emoji: clue.emoji,
+            clue_emoji: clue.selectedEmoji,
           },
         ])
         .select()
@@ -249,52 +249,52 @@ export default function App() {
     }
   }
 
-  const handleImDone = async () => {
-    console.log("handleImDone called", { userName, bingoLine, bingoLineLength: bingoLine?.length })
+  // const handleImDone = async () => {
+  //   console.log("handleImDone called", { userName, bingoLine, bingoLineLength: bingoLine?.length })
 
-    if (!userName || !bingoLine || bingoLine.length !== 5) {
-      alert("Bingo not yet achieved or error in submission.")
-      return
-    }
-    if (!supabase) {
-      alert("Supabase is not configured. Submission is disabled.")
-      return
-    }
+  //   if (!userName || !bingoLine || bingoLine.length !== 5) {
+  //     alert("Bingo not yet achieved or error in submission.")
+  //     return
+  //   }
+  //   if (!supabase) {
+  //     alert("Supabase is not configured. Submission is disabled.")
+  //     return
+  //   }
 
-    const submissionIds = bingoLine.map((index) => {
-      const clue = bingoClues[index]
-      return photoSubmissionIds[clue.id] || null
-    })
+  //   const submissionIds = bingoLine.map((index) => {
+  //     const clue = bingoClues[index]
+  //     return photoSubmissionIds[clue.id] || null
+  //   })
 
-    console.log("Submitting bingo with IDs:", submissionIds)
-    console.log("Photo submission IDs state:", photoSubmissionIds)
+  //   console.log("Submitting bingo with IDs:", submissionIds)
+  //   console.log("Photo submission IDs state:", photoSubmissionIds)
 
-    try {
-      const { error } = await supabase.from("bingo_submissions").insert([
-        {
-          user_id: userId,
-          photo_submission_1: submissionIds[0],
-          photo_submission_2: submissionIds[1],
-          photo_submission_3: submissionIds[2],
-          photo_submission_4: submissionIds[3],
-          photo_submission_5: submissionIds[4],
-        },
-      ])
-      if (error) throw error
-      setGameState("finished")
-      setSelectedClueIndex(null) // Deselect any clue when entering finished state
-    } catch (error: any) {
-      console.error("Error submitting bingo. Full error object:", error)
-      let errorMessage = "Failed to submit Bingo. Please check your connection and try again."
-      if (error && error.message) {
-        errorMessage = `Failed to submit Bingo: ${error.message}`
-        if (error.details) errorMessage += ` Details: ${error.details}`
-        if (error.hint) errorMessage += ` Hint: ${error.hint}`
-      }
-      console.error("Formatted Supabase error:", errorMessage)
-      alert(errorMessage)
-    }
-  }
+  //   try {
+  //     const { error } = await supabase.from("bingo_submissions").insert([
+  //       {
+  //         user_id: userId,
+  //         photo_submission_1: submissionIds[0],
+  //         photo_submission_2: submissionIds[1],
+  //         photo_submission_3: submissionIds[2],
+  //         photo_submission_4: submissionIds[3],
+  //         photo_submission_5: submissionIds[4],
+  //       },
+  //     ])
+  //     if (error) throw error
+  //     setGameState("finished")
+  //     setSelectedClueIndex(null) // Deselect any clue when entering finished state
+  //   } catch (error: any) {
+  //     console.error("Error submitting bingo. Full error object:", error)
+  //     let errorMessage = "Failed to submit Bingo. Please check your connection and try again."
+  //     if (error && error.message) {
+  //       errorMessage = `Failed to submit Bingo: ${error.message}`
+  //       if (error.details) errorMessage += ` Details: ${error.details}`
+  //       if (error.hint) errorMessage += ` Hint: ${error.hint}`
+  //     }
+  //     console.error("Formatted Supabase error:", errorMessage)
+  //     alert(errorMessage)
+  //   }
+  // }
 
   // Show error if game state couldn't be loaded
   if (gameStateError) {

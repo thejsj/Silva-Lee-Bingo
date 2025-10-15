@@ -24,6 +24,12 @@ export function useGameState() {
 
     // Fetch initial game state
     const fetchGameState = async () => {
+      if (!supabase) {
+        setError("Supabase is not configured")
+        setIsLoading(false)
+        return
+      }
+
       try {
         // Fetch game state from ID 0
         const { data: gameStateData, error: gameStateError } = await supabase
@@ -106,6 +112,7 @@ export function useGameState() {
 
     // Cleanup subscription on unmount
     return () => {
+      if (!supabase) return
       supabase.removeChannel(channel)
     }
   }, [])
