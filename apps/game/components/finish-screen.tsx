@@ -13,6 +13,17 @@ interface FinishScreenProps {
   selectedClueIndex: number | null
 }
 
+const handleClearData = () => {
+  const confirmed = window.confirm(
+    "⚠️ WARNING: This will delete ALL your data including your name, board, and completed clues. You will lose all your progress. Are you sure?"
+  )
+
+  if (confirmed) {
+    localStorage.clear()
+    window.location.reload()
+  }
+}
+
 export default function FinishScreen({
   userName,
   userId,
@@ -53,7 +64,13 @@ export default function FinishScreen({
       <p className="text-white text-lg mt-4">Congratulations {userName}! Click on any square to view your photos.</p>
 
       <div className="mt-4 text-xs text-white/70 text-center">
-        {userName} • ID: {userId}
+        <span
+          onClick={handleClearData}
+          className="cursor-pointer hover:text-white hover:underline transition-all"
+          title="Click to clear all data"
+        >
+          {userName}
+        </span> • ID: {userId}
       </div>
     </div>
   )

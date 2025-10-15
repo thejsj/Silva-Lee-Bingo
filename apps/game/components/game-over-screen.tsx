@@ -8,6 +8,17 @@ interface GameOverScreenProps {
   userId: string
 }
 
+const handleClearData = () => {
+  const confirmed = window.confirm(
+    "⚠️ WARNING: This will delete ALL your data including your name, board, and completed clues. You will lose all your progress. Are you sure?"
+  )
+
+  if (confirmed) {
+    localStorage.clear()
+    window.location.reload()
+  }
+}
+
 export default function GameOverScreen({ userName, userId }: GameOverScreenProps) {
   const [photoCount, setPhotoCount] = useState<number>(0)
   const [bingoCount, setBingoCount] = useState<number>(0)
@@ -81,7 +92,13 @@ export default function GameOverScreen({ userName, userId }: GameOverScreenProps
       </div>
 
       <div className="mt-auto pt-4 pb-2 text-xs text-white/70 text-center">
-        {userName} • ID: {userId}
+        <span
+          onClick={handleClearData}
+          className="cursor-pointer hover:text-white hover:underline transition-all"
+          title="Click to clear all data"
+        >
+          {userName}
+        </span> • ID: {userId}
       </div>
     </div>
   )
