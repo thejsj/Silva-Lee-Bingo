@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { GlobalGameState } from "@/hooks/use-game-state"
@@ -12,9 +12,27 @@ interface NameInputFormProps {
   globalGameState: GlobalGameState | null
 }
 
+interface ClueData {
+  name: string
+  description: string
+  emoji: string
+}
+
 export default function NameInputForm({ onSubmit, globalGameState }: NameInputFormProps) {
   const [name, setName] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [allNames, setAllNames] = useState<string[]>([])
+
+  // Load all names from clues-final.json
+  useEffect(() => {
+    fetch("/clues-final.json")
+      .then((res) => res.json())
+      .then((data: ClueData[]) => {
+        const names = data.map((clue) => clue.name).sort()
+        setAllNames(names)
+      })
+      .catch((error) => console.error("Error loading names:", error))
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -74,8 +92,15 @@ export default function NameInputForm({ onSubmit, globalGameState }: NameInputFo
             onChange={(e) => setName(e.target.value)}
             placeholder="Your name here..."
             className="text-center text-lg py-3"
+            list="names-list"
+            autoComplete="off"
             required
           />
+          <datalist id="names-list">
+            {allNames.map((nameOption) => (
+              <option key={nameOption} value={nameOption} />
+            ))}
+          </datalist>
         </div>
 
         <Button
