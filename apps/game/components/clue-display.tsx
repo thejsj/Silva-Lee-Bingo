@@ -66,7 +66,7 @@ export default function ClueDisplay({
 
   return (
     <div className="p-6 text-center space-y-4">
-      <div className="text-6xl mb-4">{clue.emoji}</div>
+      <div className="text-6xl mb-4">{clue.selectedEmoji}</div>
 
       <h2 className="text-xl font-bold text-bingo-green-dark mb-4">{clue.description}</h2>
 

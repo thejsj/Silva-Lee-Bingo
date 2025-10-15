@@ -199,13 +199,46 @@ export default function App() {
 
       const submissionId = insertData[0].id
 
-      setCompletedClues((prev) => {
-        const newCompleted = { ...prev, [clueId]: publicUrl }
-        const line = checkForBingo(newCompleted, bingoClues)
-        setBingoLine(line)
-        return newCompleted
-      })
-      setPhotoSubmissionIds((prev) => ({ ...prev, [clueId]: submissionId }))
+      // Update completed clues and check for bingo
+      const newCompleted = { ...completedClues, [clueId]: publicUrl }
+      const newPhotoSubmissionIds = { ...photoSubmissionIds, [clueId]: submissionId }
+
+      setCompletedClues(newCompleted)
+      setPhotoSubmissionIds(newPhotoSubmissionIds)
+
+      const line = checkForBingo(newCompleted, bingoClues)
+      setBingoLine(line)
+
+      // Automatically submit bingo if one exists
+      if (line && line.length === 5) {
+        const submissionIds = line.map((index) => {
+          const clue = bingoClues[index]
+          return newPhotoSubmissionIds[clue.id] || null
+        })
+
+        // Check if all submission IDs are valid
+        if (submissionIds.every((id) => id !== null)) {
+          try {
+            const { error: bingoError } = await supabase.from("bingo_submissions").insert([
+              {
+                user_id: userId,
+                photo_submission_1: submissionIds[0],
+                photo_submission_2: submissionIds[1],
+                photo_submission_3: submissionIds[2],
+                photo_submission_4: submissionIds[3],
+                photo_submission_5: submissionIds[4],
+              },
+            ])
+
+            if (bingoError) {
+              console.error("Error submitting bingo automatically:", bingoError)
+            }
+          } catch (bingoSubmitError) {
+            console.error("Failed to auto-submit bingo:", bingoSubmitError)
+          }
+        }
+      }
+
       setGameState("playing") // Go back to board view
       setSelectedClueIndex(null)
     } catch (error) {
@@ -343,22 +376,6 @@ export default function App() {
         </div>
       )}
 
-      {bingoLine && gameState === "playing" && (
-        <Button
-          onClick={handleImDone}
-          disabled={!isSupabaseConfigured}
-          className="my-4 bg-bingo-green-button hover:bg-bingo-green-button/90 text-white text-xl py-4 px-8 flex items-center justify-center"
-        >
-          <span role="img" aria-label="trophy" className="mr-3 text-2xl">
-            🏆
-          </span>
-          I'm Done!
-          <span role="img" aria-label="trophy" className="ml-3 text-2xl">
-            🏆
-          </span>
-        </Button>
-      )}
-
       <BingoBoard
         clues={bingoClues}
         completedClues={completedClues}
@@ -386,8 +403,8 @@ export default function App() {
             <li>Find the person/item for the clue.</li>
             <li>Take and upload a selfie/photo with them.</li>
             <li>
-              When you complete 5 in a row (horizontally, vertically, or diagonally), an "I'm Done" button will appear.
-              Click it to submit your BINGO!
+              When you complete 5 in a row (horizontally, vertically, or diagonally), your BINGO will be automatically
+              submitted!
             </li>
           </ol>
         </div>
