@@ -7,8 +7,8 @@
     "dev:game": "pnpm --filter game dev",
     "dev:control": "pnpm --filter control-plane dev",
     "deploy": "pnpm run deploy:game && pnpm run deploy:control",
-    "deploy:game": "cd apps/game && pnpm build && netlify deploy --prod --dir=dist",
-    "deploy:control": "cd apps/control-plane && pnpm build && netlify deploy --prod --dir=dist"
+    "deploy:game": "cd apps/game && pnpm build && netlify deploy --prod",
+    "deploy:control": "cd apps/control-plane && pnpm build && netlify deploy --prod"
   },
   "devDependencies": {},
   "pnpm": {
