@@ -1,0 +1,4 @@
+[build]
+  base = "apps/game"
+  command = "pnpm --filter game... run build"
+  publish = "dist"
