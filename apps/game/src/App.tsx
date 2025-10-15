@@ -147,6 +147,27 @@ export default function App() {
     }
   }
 
+  const handleClearData = () => {
+    const confirmed = window.confirm(
+      "⚠️ WARNING: This will delete ALL your data including your name, board, and completed clues. You will lose all your progress. Are you sure?"
+    )
+
+    if (confirmed) {
+      // Clear all local storage
+      localStorage.clear()
+
+      // Reset all state
+      setUserName(null)
+      setUserId(null)
+      setBingoClues([])
+      setCompletedClues({})
+      setPhotoSubmissionIds({})
+      setSelectedClueIndex(null)
+      setBingoLine(null)
+      setGameState("name_input")
+    }
+  }
+
   const BUCKET_NAME = "silva-lee-bingo"
 
   const handlePhotoUpload = async (file: File, clueId: string) => {
@@ -413,7 +434,13 @@ export default function App() {
       )}
 
       <div className="mt-auto pt-4 pb-2 text-xs text-bingo-green-dark/70 text-center">
-        {userName} • ID: {userId}
+        <span
+          onClick={handleClearData}
+          className="cursor-pointer hover:text-bingo-green-dark hover:underline transition-all"
+          title="Click to clear all data"
+        >
+          {userName}
+        </span> • ID: {userId}
       </div>
     </div>
   )
