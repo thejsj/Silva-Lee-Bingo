@@ -5,7 +5,10 @@
   "scripts": {
     "build": "pnpm -r build",
     "dev:game": "pnpm --filter game dev",
-    "dev:control": "pnpm --filter control-plane dev"
+    "dev:control": "pnpm --filter control-plane dev",
+    "deploy": "pnpm run deploy:game && pnpm run deploy:control",
+    "deploy:game": "cd apps/game && pnpm build && netlify deploy --prod --dir=dist",
+    "deploy:control": "cd apps/control-plane && pnpm build && netlify deploy --prod --dir=dist"
   },
   "devDependencies": {},
   "pnpm": {
