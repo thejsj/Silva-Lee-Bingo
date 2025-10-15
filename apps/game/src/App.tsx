@@ -264,7 +264,7 @@ export default function App() {
       setSelectedClueIndex(null)
     } catch (error) {
       console.error("Error uploading photo:", error)
-      alert("Failed to upload photo. Please try again.")
+      alert("Failed to upload photo. Please try again.\n\n" + (error as Error).message)
     } finally {
       setIsUploading(false)
     }
