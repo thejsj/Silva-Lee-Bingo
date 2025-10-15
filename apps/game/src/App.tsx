@@ -34,7 +34,7 @@ export default function App() {
   const [isUploading, setIsUploading] = useState(false)
 
   // Global game state from Supabase
-  const { globalGameState, isLoading: isGameStateLoading, error: gameStateError } = useGameState()
+  const { globalGameState, testMode, isLoading: isGameStateLoading, error: gameStateError } = useGameState()
 
   useEffect(() => {
     if (supabase) {
@@ -354,6 +354,7 @@ export default function App() {
               isUploading={false}
               uploadedPhotoUrl={completedClues[currentClueForDisplay.id]}
               isFinishedView={true}
+              testMode={testMode}
             />
           </div>
         )}
@@ -392,6 +393,7 @@ export default function App() {
           uploadedPhotoUrl={completedClues[currentClueForDisplay.id]}
           isFinishedView={false}
           isSupabaseConfigured={isSupabaseConfigured}
+          testMode={testMode}
         />
       )}
 

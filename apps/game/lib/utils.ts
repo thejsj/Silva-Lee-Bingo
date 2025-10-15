@@ -9,6 +9,7 @@ export interface Clue {
   id: string
   emoji: string
   description: string
+  name?: string
   photoUrl?: string
 }
 
