@@ -263,9 +263,10 @@ function App() {
     const confirmed = confirm(
       "Are you sure you want to delete all game state? This will:\n\n" +
         "1. Set game to 'pending'\n" +
-        "2. Delete all photo submissions\n" +
-        "3. Delete all users\n" +
-        "4. Delete all photos from the bucket\n\n" +
+        "2. Delete all bingo submissions\n" +
+        "3. Delete all photo submissions\n" +
+        "4. Delete all users\n" +
+        "5. Delete all photos from the bucket\n\n" +
         "This action cannot be undone!",
     )
 
@@ -277,7 +278,11 @@ function App() {
       const { error: gameStateError } = await supabase.from("game_state").update({ state: "pending" }).eq("id", 0)
       if (gameStateError) throw gameStateError
 
-      // 2. Get all photos from bucket to delete them
+      // 2. Delete all bingo submissions (must be before photo_submissions due to foreign key)
+      const { error: bingoSubmissionsError } = await supabase.from("bingo_submissions").delete().neq("id", 0)
+      if (bingoSubmissionsError) throw bingoSubmissionsError
+
+      // 3. Get all photos from bucket to delete them
       const { data: files, error: listError } = await supabase.storage.from("silva-lee-bingo").list()
 
       if (listError) throw listError
@@ -289,11 +294,11 @@ function App() {
         if (deleteFilesError) throw deleteFilesError
       }
 
-      // 3. Delete all photo submissions
+      // 4. Delete all photo submissions
       const { error: photoSubmissionsError } = await supabase.from("photo_submissions").delete().neq("id", 0)
       if (photoSubmissionsError) throw photoSubmissionsError
 
-      // 4. Delete all users
+      // 5. Delete all users
       const { error: usersError } = await supabase.from("users").delete().neq("id", "")
       if (usersError) throw usersError
 
@@ -469,6 +474,7 @@ function App() {
                 This will reset the entire game, including:
                 <ul className="list-disc list-inside mt-2 space-y-1">
                   <li>Set game state to "pending"</li>
+                  <li>Delete all bingo submissions</li>
                   <li>Delete all photo submissions</li>
                   <li>Delete all users</li>
                   <li>Delete all photos from the bucket</li>
