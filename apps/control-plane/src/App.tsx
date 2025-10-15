@@ -7,6 +7,8 @@ type LeaderboardEntry = {
   user_id: string
   name: string
   submission_count: number
+  bingo_count: number
+  score: number
 }
 type PhotoSubmission = {
   id: string
@@ -25,7 +27,7 @@ function App() {
   const [isDeleting, setIsDeleting] = useState(false)
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
   const [photos, setPhotos] = useState<PhotoSubmission[]>([])
-  const leaderboardTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const leaderboardTimerRef = useRef<any>(null)
 
   // Load initial game state
   useEffect(() => {
@@ -64,6 +66,7 @@ function App() {
       .subscribe()
 
     return () => {
+      if (!supabase) return
       supabase.removeChannel(usersChannel)
       supabase.removeChannel(photoSubmissionsChannel)
       supabase.removeChannel(gameStateChannel)
@@ -106,6 +109,7 @@ function App() {
       .subscribe()
 
     return () => {
+      if (!supabase) return
       supabase.removeChannel(photosChannel)
       // Clear any pending leaderboard refresh timer
       if (leaderboardTimerRef.current) {
@@ -186,6 +190,21 @@ function App() {
         leaderboardMap.set(submission.user_id, count + 1)
       })
 
+      // Fetch bingo counts
+      const { data: bingoData, error: bingoError } = await supabase
+        .from("bingo_submissions")
+        .select("user_id")
+        .order("user_id")
+
+      if (bingoError) throw bingoError
+
+      // Group by user_id and count bingos
+      const bingoMap = new Map<string, number>()
+      bingoData?.forEach((submission) => {
+        const count = bingoMap.get(submission.user_id) || 0
+        bingoMap.set(submission.user_id, count + 1)
+      })
+
       // Fetch user names
       const userIds = Array.from(leaderboardMap.keys())
       const { data: users, error: usersError } = await supabase
@@ -201,14 +220,20 @@ function App() {
         userNameMap.set(user.id, user.name)
       })
 
-      // Convert to array and sort by submission count
+      // Convert to array, calculate score, and sort by score
       const leaderboardArray: LeaderboardEntry[] = Array.from(leaderboardMap.entries())
-        .map(([user_id, submission_count]) => ({
-          user_id,
-          name: userNameMap.get(user_id) || user_id,
-          submission_count,
-        }))
-        .sort((a, b) => b.submission_count - a.submission_count)
+        .map(([user_id, submission_count]) => {
+          const bingo_count = bingoMap.get(user_id) || 0
+          const score = submission_count + (bingo_count * 5)
+          return {
+            user_id,
+            name: userNameMap.get(user_id) || user_id,
+            submission_count,
+            bingo_count,
+            score,
+          }
+        })
+        .sort((a, b) => b.score - a.score)
 
       setLeaderboard(leaderboardArray)
     } catch (error) {
@@ -398,16 +423,26 @@ function App() {
                 {leaderboard.length === 0 ? (
                   <p className="text-gray-600">No submissions yet</p>
                 ) : (
-                  <ol className="space-y-2">
+                  <div className="space-y-2">
+                    {/* Header */}
+                    <div className="flex justify-between items-center pb-2 border-b border-gray-200 font-semibold text-gray-600 text-sm">
+                      <span className="flex-1">Name</span>
+                      <span className="w-16 text-center">Bingos</span>
+                      <span className="w-16 text-center">Photos</span>
+                      <span className="w-16 text-center">Score</span>
+                    </div>
+                    {/* Leaderboard entries */}
                     {leaderboard.map((entry, index) => (
-                      <li key={entry.user_id} className="flex justify-between items-center">
-                        <span className="text-gray-800">
+                      <div key={entry.user_id} className="flex justify-between items-center">
+                        <span className="flex-1 text-gray-800">
                           {index + 1}. {entry.name}
                         </span>
-                        <span className="font-semibold text-green-600">{entry.submission_count}</span>
-                      </li>
+                        <span className="w-16 text-center text-gray-800">{entry.bingo_count}</span>
+                        <span className="w-16 text-center text-gray-600">{entry.submission_count}</span>
+                        <span className="w-16 text-center font-bold text-green-600">{entry.score}</span>
+                      </div>
                     ))}
-                  </ol>
+                  </div>
                 )}
               </div>
             </div>
