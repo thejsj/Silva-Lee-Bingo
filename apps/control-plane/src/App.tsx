@@ -415,7 +415,7 @@ function App() {
         )}
 
         {activeTab === "settings" && (
-          <div className="max-w-4xl mx-auto">
+          <div className="max-w-4xl mx-auto mt-6 mb-6">
             <h2 className="text-3xl font-bold mb-6 text-gray-800">Settings</h2>
 
             {/* Realtime Counters */}

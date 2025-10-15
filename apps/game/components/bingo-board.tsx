@@ -9,46 +9,34 @@ interface BingoBoardProps {
   bingoLine: number[] | null
 }
 
+const BINGO_LETTERS = ["B", "I", "N", "G", "O"]
+
+const findLetterForIndex = (bingoIndices: number[][], index: number) => {
+  for (const line of bingoIndices) {
+    if (line.includes(index)) {
+      return BINGO_LETTERS[line.indexOf(index)]
+    }
+  }
+  return null
+}
+
 export default function BingoBoard({
   clues,
   completedClues,
   onSquareClick,
   selectedClueIndex,
-  bingoLine,
 }: BingoBoardProps) {
-  const bingoLetters = ["B", "I", "N", "G", "O"]
-
   // Get all bingo lines to determine which letters to highlight
   const allBingoLines = getAllBingoLines(completedClues, clues)
-  const allBingoIndices = allBingoLines.flat()
 
   return (
     <div className="w-[360px] mx-auto">
-      <div className="grid grid-cols-5 gap-1 mb-2">
-        {bingoLetters.map((letter, colIndex) => {
-          // Check if any cell in this column is part of any bingo line
-          const columnIndices = [colIndex, colIndex + 5, colIndex + 10, colIndex + 15, colIndex + 20]
-          const isHighlighted = columnIndices.some((cellIndex) => allBingoIndices.includes(cellIndex))
-
-          return (
-            <div
-              key={colIndex}
-              className={`text-center text-2xl font-bold py-2 ${
-                isHighlighted ? "text-bingo-green-button" : "text-transparent"
-              }`}
-            >
-              {letter}
-            </div>
-          )
-        })}
-      </div>
-
       <div className="grid grid-cols-5 gap-1 p-2 bg-bingo-green-dark rounded-md shadow-lg">
         {clues.map((clue, index) => {
           const isCompleted = completedClues[clue.id]
           const photoUrl = completedClues[clue.id]
           const isSelected = selectedClueIndex === index
-          const isInBingoLine = bingoLine?.includes(index)
+          const isInBingoLine = allBingoLines.some((line) => line.includes(index))
 
           return (
             <button
@@ -70,11 +58,16 @@ export default function BingoBoard({
                     className="absolute inset-0 w-full h-full object-cover rounded opacity-50"
                   />
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-2xl drop-shadow-lg">{clue.emoji}</span>
+                    <span className="text-2xl drop-shadow-lg">{clue.selectedEmoji}</span>
                   </div>
+                  {isInBingoLine && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="text-2xl drop-shadow-lg text-white">{findLetterForIndex(allBingoLines, index)}</span>
+                    </div>
+                  )}
                 </div>
               ) : (
-                <span>{clue.emoji}</span>
+                <span>{clue.selectedEmoji}</span>
               )}
             </button>
           )
