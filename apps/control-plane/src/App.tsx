@@ -3,6 +3,7 @@ import { supabase } from "./lib/supabase-client"
 
 type TabType = "board" | "settings"
 type GameStateType = "pending" | "active" | "finished"
+type TestModeType = "test" | "active"
 type LeaderboardEntry = {
   user_id: string
   name: string
@@ -20,6 +21,7 @@ type PhotoSubmission = {
 function App() {
   const [activeTab, setActiveTab] = useState<TabType>("board")
   const [gameState, setGameState] = useState<GameStateType>("pending")
+  const [testMode, setTestMode] = useState<TestModeType>("active")
   const [userCount, setUserCount] = useState<number>(0)
   const [photoSubmissionCount, setPhotoSubmissionCount] = useState<number>(0)
   const [isLoading, setIsLoading] = useState(true)
@@ -125,12 +127,30 @@ function App() {
     }
 
     try {
-      const { data, error } = await supabase.from("game_state").select("state").eq("id", 0).single()
+      // Fetch game state from ID 0
+      const { data: gameStateData, error: gameStateError } = await supabase
+        .from("game_state")
+        .select("state")
+        .eq("id", 0)
+        .single()
 
-      if (error) throw error
+      if (gameStateError) throw gameStateError
 
-      if (data) {
-        setGameState(data.state as GameStateType)
+      if (gameStateData) {
+        setGameState(gameStateData.state as GameStateType)
+      }
+
+      // Fetch test mode from ID 1
+      const { data: testModeData, error: testModeError } = await supabase
+        .from("game_state")
+        .select("state")
+        .eq("id", 1)
+        .single()
+
+      if (testModeError) throw testModeError
+
+      if (testModeData) {
+        setTestMode(testModeData.state as TestModeType)
       }
     } catch (error) {
       console.error("Error loading game state:", error)
@@ -266,9 +286,15 @@ function App() {
 
     setIsSaving(true)
     try {
-      const { error } = await supabase.from("game_state").update({ state: gameState }).eq("id", 0)
+      // Update game state at ID 0
+      const { error: gameStateError } = await supabase.from("game_state").update({ state: gameState }).eq("id", 0)
 
-      if (error) throw error
+      if (gameStateError) throw gameStateError
+
+      // Update test mode at ID 1
+      const { error: testModeError } = await supabase.from("game_state").update({ state: testMode }).eq("id", 1)
+
+      if (testModeError) throw testModeError
 
       alert("Game state updated successfully!")
     } catch (error) {
@@ -299,7 +325,7 @@ function App() {
 
     setIsDeleting(true)
     try {
-      // 1. Set game to pending
+      // 1. Set game to pending (ID 0)
       const { error: gameStateError } = await supabase.from("game_state").update({ state: "pending" }).eq("id", 0)
       if (gameStateError) throw gameStateError
 
@@ -475,11 +501,11 @@ function App() {
 
             {/* Game State Form */}
             <div className="bg-white rounded-lg shadow p-6 mb-6">
-              <h3 className="text-xl font-semibold mb-4 text-gray-800">Game State</h3>
+              <h3 className="text-xl font-semibold mb-4 text-gray-800">Game Configuration</h3>
               <form onSubmit={handleGameStateSubmit} className="space-y-4">
                 <div>
                   <label htmlFor="gameState" className="block text-sm font-medium text-gray-700 mb-2">
-                    Select Game State
+                    Game State
                   </label>
                   <select
                     id="gameState"
@@ -490,6 +516,20 @@ function App() {
                     <option value="pending">Pending</option>
                     <option value="active">Active</option>
                     <option value="finished">Finished</option>
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="testMode" className="block text-sm font-medium text-gray-700 mb-2">
+                    Test Mode
+                  </label>
+                  <select
+                    id="testMode"
+                    value={testMode}
+                    onChange={(e) => setTestMode(e.target.value as TestModeType)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="test">Test</option>
+                    <option value="active">Active</option>
                   </select>
                 </div>
                 <button

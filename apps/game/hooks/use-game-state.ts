@@ -2,14 +2,16 @@ import { useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase-client"
 
 export type GlobalGameState = "pending" | "active" | "finished"
+export type TestMode = "test" | "active"
 
 interface GameStateRecord {
   id: number
-  state: GlobalGameState
+  state: string
 }
 
 export function useGameState() {
   const [globalGameState, setGlobalGameState] = useState<GlobalGameState | null>(null)
+  const [testMode, setTestMode] = useState<TestMode | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -23,25 +25,44 @@ export function useGameState() {
     // Fetch initial game state
     const fetchGameState = async () => {
       try {
-        const { data, error: fetchError } = await supabase
+        // Fetch game state from ID 0
+        const { data: gameStateData, error: gameStateError } = await supabase
           .from("game_state")
           .select("*")
           .eq("id", 0)
           .single<GameStateRecord>()
 
-        if (fetchError) {
-          if (fetchError.code === "PGRST116") {
-            // No rows found
+        if (gameStateError) {
+          if (gameStateError.code === "PGRST116") {
             throw new Error("Game state row with ID 0 does not exist. Please create it in the database.")
           }
-          throw fetchError
+          throw gameStateError
         }
 
-        if (!data) {
+        if (!gameStateData) {
           throw new Error("Game state row with ID 0 does not exist. Please create it in the database.")
         }
 
-        setGlobalGameState(data.state)
+        // Fetch test mode from ID 1
+        const { data: testModeData, error: testModeError } = await supabase
+          .from("game_state")
+          .select("*")
+          .eq("id", 1)
+          .single<GameStateRecord>()
+
+        if (testModeError) {
+          if (testModeError.code === "PGRST116") {
+            throw new Error("Game state row with ID 1 does not exist. Please create it in the database.")
+          }
+          throw testModeError
+        }
+
+        if (!testModeData) {
+          throw new Error("Game state row with ID 1 does not exist. Please create it in the database.")
+        }
+
+        setGlobalGameState(gameStateData.state as GlobalGameState)
+        setTestMode(testModeData.state as TestMode)
         setIsLoading(false)
       } catch (err) {
         console.error("Error fetching game state:", err)
@@ -52,7 +73,7 @@ export function useGameState() {
 
     fetchGameState()
 
-    // Subscribe to real-time changes
+    // Subscribe to real-time changes for both game state (ID 0) and test mode (ID 1)
     const channel = supabase
       .channel("game_state_changes")
       .on(
@@ -64,8 +85,21 @@ export function useGameState() {
           filter: "id=eq.0",
         },
         (payload) => {
-          const newState = (payload.new as GameStateRecord).state
-          setGlobalGameState(newState)
+          const record = payload.new as GameStateRecord
+          setGlobalGameState(record.state as GlobalGameState)
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "game_state",
+          filter: "id=eq.1",
+        },
+        (payload) => {
+          const record = payload.new as GameStateRecord
+          setTestMode(record.state as TestMode)
         }
       )
       .subscribe()
@@ -76,5 +110,5 @@ export function useGameState() {
     }
   }, [])
 
-  return { globalGameState, isLoading, error }
+  return { globalGameState, testMode, isLoading, error }
 }
