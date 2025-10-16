@@ -67,7 +67,7 @@ export default function NameInputForm({ onSubmit, globalGameState }: NameInputFo
         onSubmit(data.name, data.id)
       } catch (error) {
         console.error("Error creating user:", error)
-        alert("Failed to create user. Please try again.")
+        alert("Failed to create user. Please try again.\n\nError: " + error)
         setIsSubmitting(false)
       }
     }

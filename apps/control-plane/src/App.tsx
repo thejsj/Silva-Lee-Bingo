@@ -299,7 +299,7 @@ function App() {
       alert("Game state updated successfully!")
     } catch (error) {
       console.error("Error updating game state:", error)
-      alert("Failed to update game state. Please try again.")
+      alert("Failed to update game state. Please try again.\n\nError: " + error)
     } finally {
       setIsSaving(false)
     }
