@@ -7,10 +7,12 @@ import PendingScreen from "@/components/pending-screen"
 import GameOverScreen from "@/components/game-over-screen"
 import GameClosedScreen from "@/components/game-closed-screen"
 import { supabase } from "@/lib/supabase-client"
-import { type Clue, getInitialClues, checkForBingo } from "@/lib/utils"
+import { type Clue, type Player, generateBoard, validateRoster, checkForBingo } from "@/lib/utils"
 import { useGameState } from "@/hooks/use-game-state"
 
 type GameState = "loading" | "name_input" | "playing" | "clue_view" | "finished"
+
+const BOARD_VERSION = "sep-6-24-player-v1"
 
 // Placeholder for your logo
 const Logo = () => (
@@ -24,7 +26,8 @@ export default function App() {
   const [gameState, setGameState] = useState<GameState>("loading")
   const [userName, setUserName] = useState<string | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
-  const [allRawClues, setAllRawClues] = useState<any[]>([])
+  const [players, setPlayers] = useState<Player[]>([])
+  const [rosterError, setRosterError] = useState<string | null>(null)
   const [bingoClues, setBingoClues] = useState<Clue[]>([]) // 25 clues for the board
   const [completedClues, setCompletedClues] = useState<{ [key: string]: string }>({}) // clue.id -> photoUrl
   const [photoSubmissionIds, setPhotoSubmissionIds] = useState<{ [key: string]: number }>({}) // clue.id -> submission ID
@@ -41,14 +44,21 @@ export default function App() {
     }
   }, [])
 
-  // Load all clues from JSON
+  // Load and validate the player roster
   useEffect(() => {
     fetch("/clues.json")
-      .then((res) => res.json())
-      .then((data) => {
-        setAllRawClues(data)
+      .then((res) => {
+        if (!res.ok) throw new Error("Could not load the player roster.")
+        return res.json()
       })
-      .catch(console.error)
+      .then((data: Player[]) => {
+        validateRoster(data)
+        setPlayers(data)
+      })
+      .catch((error) => {
+        console.error("Error loading roster:", error)
+        setRosterError(error instanceof Error ? error.message : "Could not load the player roster.")
+      })
   }, [])
 
   // Load user's photo submissions from database
@@ -85,13 +95,22 @@ export default function App() {
 
   // Initialize game from local storage or set to name_input
   useEffect(() => {
-    if (allRawClues.length === 0) return // Wait for clues.json to load
+    if (players.length === 0) return
 
     const storedName = localStorage.getItem("bingoUserName")
     const storedUserId = localStorage.getItem("bingoUserId")
+    const storedRosterPlayerId = localStorage.getItem("bingoRosterPlayerId")
     const storedClues = localStorage.getItem("bingoBoardClues")
+    const storedBoardVersion = localStorage.getItem("bingoBoardVersion")
 
-    if (storedName && storedUserId && storedClues) {
+    if (
+      storedName &&
+      storedUserId &&
+      storedRosterPlayerId &&
+      storedClues &&
+      storedBoardVersion === BOARD_VERSION &&
+      players.some((player) => player.id === storedRosterPlayerId)
+    ) {
       setUserName(storedName)
       setUserId(storedUserId)
       const parsedClues: Clue[] = JSON.parse(storedClues)
@@ -107,13 +126,17 @@ export default function App() {
 
       setGameState("playing")
     } else {
+      localStorage.removeItem("bingoUserName")
+      localStorage.removeItem("bingoUserId")
+      localStorage.removeItem("bingoRosterPlayerId")
+      localStorage.removeItem("bingoBoardClues")
+      localStorage.removeItem("bingoBoardVersion")
       setGameState("name_input")
     }
-  }, [allRawClues])
+  }, [players])
 
-  const handleNameSubmit = (name: string, userId: string) => {
-    console.log("all raw clues", allRawClues)
-    const initialBoardClues = getInitialClues(allRawClues, 25)
+  const handleNameSubmit = (name: string, userId: string, selectedRosterPlayerId: string) => {
+    const initialBoardClues = generateBoard(players, selectedRosterPlayerId)
     setUserName(name)
     setUserId(userId)
     setBingoClues(initialBoardClues)
@@ -122,7 +145,9 @@ export default function App() {
 
     localStorage.setItem("bingoUserName", name)
     localStorage.setItem("bingoUserId", userId)
+    localStorage.setItem("bingoRosterPlayerId", selectedRosterPlayerId)
     localStorage.setItem("bingoBoardClues", JSON.stringify(initialBoardClues))
+    localStorage.setItem("bingoBoardVersion", BOARD_VERSION)
     setGameState("playing")
   }
 
@@ -317,19 +342,19 @@ export default function App() {
   //   }
   // }
 
-  // Show error if game state couldn't be loaded
-  if (gameStateError) {
+  // Show error if the game state or roster couldn't be loaded
+  if (gameStateError || rosterError) {
     return (
       <div className="flex items-center justify-center min-h-screen text-center p-4">
         <div>
           <h2 className="text-2xl font-bold text-red-600 mb-2">Error Loading Game</h2>
-          <p className="text-lg">{gameStateError}</p>
+          <p className="text-lg">{gameStateError || rosterError}</p>
         </div>
       </div>
     )
   }
 
-  if (gameState === "loading" || allRawClues.length === 0 || isGameStateLoading) {
+  if (gameState === "loading" || players.length === 0 || isGameStateLoading) {
     return <div className="flex items-center justify-center min-h-screen text-2xl">Loading Game...</div>
   }
 
@@ -349,7 +374,7 @@ export default function App() {
   }
 
   if (gameState === "name_input") {
-    return <NameInputForm onSubmit={handleNameSubmit} globalGameState={globalGameState} />
+    return <NameInputForm players={players} onSubmit={handleNameSubmit} globalGameState={globalGameState} />
   }
 
   if (gameState === "finished") {

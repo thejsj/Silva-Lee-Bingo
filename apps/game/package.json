@@ -5,7 +5,8 @@
   "scripts": {
     "build": "vite build",
     "dev": "vite",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "node --test ./lib/board.test.ts"
   },
   "dependencies": {
     "shared-styles": "workspace:*",

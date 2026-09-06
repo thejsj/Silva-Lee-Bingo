@@ -1,31 +1,12 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
+import type { Clue } from "./board"
+
+export { generateBoard, validateRoster } from "./board"
+export type { Clue, Player, PlayerClue } from "./board"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
-}
-
-export interface Clue {
-  id: string
-  name: string
-  emojis: string[]
-  description: string
-  selectedEmoji: string
-}
-
-export function getInitialClues(allClues: any[], count: number): Clue[] {
-  const shuffled = [...allClues].sort(() => Math.random() - 0.5)
-  return shuffled.slice(0, count).map((clue) => {
-    const emojis = clue.emojis.split(" ")
-    const selectedEmoji = emojis[Math.floor(Math.random() * emojis.length)]
-    return {
-      id: clue.id,
-      name: clue.name,
-      emojis: clue.emojis,
-      description: clue.description,
-      selectedEmoji: selectedEmoji,
-    }
-  })
 }
 
 export function checkForBingo(completedClues: { [key: string]: string }, bingoClues: Clue[]): number[] | null {

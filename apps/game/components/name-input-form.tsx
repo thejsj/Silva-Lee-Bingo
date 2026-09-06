@@ -2,37 +2,20 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import type { GlobalGameState } from "@/hooks/use-game-state"
+import type { Player } from "@/lib/utils"
 
 interface NameInputFormProps {
-  onSubmit: (name: string, userId: string) => void
+  players: Player[]
+  onSubmit: (name: string, userId: string, rosterPlayerId: string) => void
   globalGameState: GlobalGameState | null
 }
 
-interface ClueData {
-  name: string
-  description: string
-  emoji: string
-}
-
-export default function NameInputForm({ onSubmit, globalGameState }: NameInputFormProps) {
-  const [name, setName] = useState("")
+export default function NameInputForm({ players, onSubmit, globalGameState }: NameInputFormProps) {
+  const [rosterPlayerId, setRosterPlayerId] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [allNames, setAllNames] = useState<string[]>([])
-
-  // Load all names from clues-final.json
-  useEffect(() => {
-    fetch("/clues.json")
-      .then((res) => res.json())
-      .then((data: ClueData[]) => {
-        const names = data.map((clue) => clue.name).sort()
-        setAllNames(names)
-      })
-      .catch((error) => console.error("Error loading names:", error))
-  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -43,7 +26,8 @@ export default function NameInputForm({ onSubmit, globalGameState }: NameInputFo
       return
     }
 
-    if (name.trim() && !isSubmitting) {
+    const selectedPlayer = players.find((player) => player.id === rosterPlayerId)
+    if (selectedPlayer && !isSubmitting) {
       setIsSubmitting(true)
       try {
         const { supabase } = await import("@/lib/supabase-client")
@@ -51,20 +35,20 @@ export default function NameInputForm({ onSubmit, globalGameState }: NameInputFo
         if (!supabase) {
           // Fallback if Supabase is not configured
           const fallbackId = `local-${Date.now()}`
-          onSubmit(name.trim(), fallbackId)
+          onSubmit(selectedPlayer.name, fallbackId, selectedPlayer.id)
           return
         }
 
         // Insert user into Supabase
         const { data, error } = await supabase
           .from("users")
-          .insert([{ name: name.trim() }])
+          .insert([{ name: selectedPlayer.name }])
           .select()
           .single()
 
         if (error) throw error
 
-        onSubmit(data.name, data.id)
+        onSubmit(data.name, data.id, selectedPlayer.id)
       } catch (error) {
         console.error("Error creating user:", error)
         alert("Failed to create user. Please try again.\n\nError: " + error)
@@ -82,30 +66,30 @@ export default function NameInputForm({ onSubmit, globalGameState }: NameInputFo
 
       <form onSubmit={handleSubmit} className="w-full max-w-md space-y-4">
         <div>
-          <label htmlFor="name" className="block text-lg font-medium text-bingo-green-dark mb-2 text-center">
-            Enter your name:
+          <label htmlFor="rosterPlayer" className="block text-lg font-medium text-bingo-green-dark mb-2 text-center">
+            Select your name:
           </label>
-          <Input
-            type="text"
-            id="name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Your name here..."
-            className="text-center text-lg py-3"
-            list="names-list"
-            autoComplete="off"
+          <select
+            id="rosterPlayer"
+            value={rosterPlayerId}
+            onChange={(e) => setRosterPlayerId(e.target.value)}
+            className="w-full rounded-md border border-input bg-background px-3 py-3 text-center text-lg"
             required
-          />
-          <datalist id="names-list">
-            {allNames.map((nameOption) => (
-              <option key={nameOption} value={nameOption} />
-            ))}
-          </datalist>
+          >
+            <option value="">Choose your name...</option>
+            {[...players]
+              .sort((a, b) => a.name.localeCompare(b.name))
+              .map((player) => (
+                <option key={player.id} value={player.id}>
+                  {player.name}
+                </option>
+              ))}
+          </select>
         </div>
 
         <Button
           type="submit"
-          disabled={!name.trim() || isSubmitting}
+          disabled={!rosterPlayerId || isSubmitting}
           className="w-full bg-bingo-green-button hover:bg-bingo-green-button/90 text-white text-xl py-4 flex items-center justify-center"
         >
           <span role="img" aria-label="start" className="mr-3 text-2xl">
