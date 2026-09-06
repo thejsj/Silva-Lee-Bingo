@@ -10,8 +10,5 @@
     "deploy:game": "cd apps/game && pnpm build && netlify deploy --prod",
     "deploy:control": "cd apps/control-plane && pnpm build && netlify deploy --prod"
   },
-  "devDependencies": {},
-  "pnpm": {
-    "overrides": {}
-  }
+  "devDependencies": {}
 }

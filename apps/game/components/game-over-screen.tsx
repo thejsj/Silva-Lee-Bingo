@@ -63,7 +63,7 @@ export default function GameOverScreen({ userName, userId }: GameOverScreenProps
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-bingo-green-dark">
       <div className="text-center">
-        <h1 className="text-4xl font-bold text-white mb-4">Silva Lee Bingo</h1>
+        <h1 className="text-4xl font-bold text-white mb-4">Hangout Bingo</h1>
         <div className="flex items-center justify-center mb-6">
           <span role="img" aria-label="party" className="text-5xl">
             🎉

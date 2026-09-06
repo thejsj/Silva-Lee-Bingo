@@ -35,7 +35,7 @@ export default function FinishScreen({
 }: FinishScreenProps) {
   return (
     <div className="flex flex-col items-center justify-center p-4 text-center w-full">
-      <h1 className="text-4xl font-bold text-white mb-2">Silva Lee Bingo</h1>
+      <h1 className="text-4xl font-bold text-white mb-2">Hangout Bingo</h1>
 
       <div className="flex items-center justify-center mb-6">
         <span role="img" aria-label="trophy" className="text-3xl mr-2">

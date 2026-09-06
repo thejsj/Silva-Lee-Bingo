@@ -2,12 +2,15 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js"
 
 let supabaseInstance: SupabaseClient | null = null
 
-const supabaseUrl = 'https://nmmaiyaljmuxuqcgcwjg.supabase.co'
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tbWFpeWFsam11eHVxY2djd2pnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk4Mzk2ODUsImV4cCI6MjA2NTQxNTY4NX0.2ZtL2EUTCem4R-BPWibjMa0HaPj0Ic223mOwlDs35r0'
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+const supabasePublishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
 
-if (supabaseUrl && supabaseAnonKey) {
+export let supabaseProjectRef: string | null = null
+
+if (supabaseUrl && supabasePublishableKey) {
   try {
-    supabaseInstance = createClient(supabaseUrl, supabaseAnonKey)
+    supabaseProjectRef = new URL(supabaseUrl).hostname.split(".")[0] || null
+    supabaseInstance = createClient(supabaseUrl, supabasePublishableKey)
   } catch (e) {
     console.error(
       "Error initializing Supabase client despite URL and Key being present. This might be due to an invalid URL format or other issues:",
@@ -17,7 +20,7 @@ if (supabaseUrl && supabaseAnonKey) {
   }
 } else {
   console.warn(
-    "Supabase URL or Anon Key is missing. Supabase-dependent features (photo uploads, final submissions) will be disabled. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY environment variables in your Vercel project for full functionality.",
+    "Supabase URL or publishable key is missing. Set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY.",
   )
 }
 

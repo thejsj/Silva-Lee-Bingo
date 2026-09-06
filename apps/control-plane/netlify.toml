@@ -1,4 +1,4 @@
 [build]
   base = "apps/control-plane"
-  command = "pnpm --filter game... run build"
+  command = "pnpm --filter control-plane... run build"
   publish = "dist"

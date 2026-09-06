@@ -60,7 +60,7 @@ export default function NameInputForm({ players, onSubmit, globalGameState }: Na
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-bingo-green-light">
       <div className="text-center mb-8">
-        <h1 className="text-4xl font-bold text-bingo-green-dark mb-4">Silva Lee Bingo</h1>
+        <h1 className="text-4xl font-bold text-bingo-green-dark mb-4">Hangout Bingo</h1>
         <p className="text-xl text-bingo-green-dark">Welcome! Let's get started.</p>
       </div>
 

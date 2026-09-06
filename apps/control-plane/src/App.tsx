@@ -340,7 +340,7 @@ function App() {
 
       // Delete all files from bucket
       if (files && files.length > 0) {
-        const filePaths = files.map((file) => `silva-lee-bingo/${file.name}`)
+        const filePaths = files.map((file) => file.name)
         const { error: deleteFilesError } = await supabase.storage.from("silva-lee-bingo").remove(filePaths)
         if (deleteFilesError) throw deleteFilesError
       }
@@ -350,7 +350,7 @@ function App() {
       if (photoSubmissionsError) throw photoSubmissionsError
 
       // 5. Delete all users
-      const { error: usersError } = await supabase.from("users").delete().neq("id", "")
+      const { error: usersError } = await supabase.from("users").delete().not("id", "is", null)
       if (usersError) throw usersError
 
       setGameState("pending")

@@ -6,18 +6,18 @@ import FinishScreen from "@/components/finish-screen"
 import PendingScreen from "@/components/pending-screen"
 import GameOverScreen from "@/components/game-over-screen"
 import GameClosedScreen from "@/components/game-closed-screen"
-import { supabase } from "@/lib/supabase-client"
+import { supabase, supabaseProjectRef } from "@/lib/supabase-client"
 import { type Clue, type Player, generateBoard, validateRoster, checkForBingo } from "@/lib/utils"
 import { useGameState } from "@/hooks/use-game-state"
 
 type GameState = "loading" | "name_input" | "playing" | "clue_view" | "finished"
 
-const BOARD_VERSION = "sep-6-24-player-v1"
+const BOARD_VERSION = `sep-6-24-player-v1-${supabaseProjectRef ?? "unconfigured"}`
 
 // Placeholder for your logo
 const Logo = () => (
   <div className="text-center my-6 cursor-pointer">
-    <h1 className="text-4xl font-bold text-bingo-green-dark">Silva Lee Bingo</h1>
+    <h1 className="text-4xl font-bold text-bingo-green-dark">Hangout Bingo</h1>
   </div>
 )
 
@@ -209,9 +209,22 @@ export default function App() {
     }
     setIsUploading(true)
     try {
+      // Local game progress can survive a database reset, leaving its saved user ID
+      // without a matching users row. Recreate it before inserting submissions that
+      // reference it through a foreign key.
+      const { error: userError } = await supabase.from("users").upsert(
+        {
+          id: userId,
+          name: userName,
+        },
+        { onConflict: "id" },
+      )
+
+      if (userError) throw userError
+
       const fileExt = file.name.split(".").pop()
       const fileName = `${userName.replace(/\s+/g, "_")}-${Date.now()}.${fileExt}`
-      const filePath = `${BUCKET_NAME}/${fileName}`
+      const filePath = fileName
 
       const { error: uploadError } = await supabase.storage.from(BUCKET_NAME).upload(filePath, file)
 
@@ -285,8 +298,6 @@ export default function App() {
         }
       }
 
-      setGameState("playing") // Go back to board view
-      setSelectedClueIndex(null)
     } catch (error) {
       console.error("Error uploading photo:", error)
       alert("Failed to upload photo. Please try again.\n\n" + (error as Error).message)

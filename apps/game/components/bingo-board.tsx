@@ -46,7 +46,7 @@ export default function BingoBoard({
                 aspect-square flex items-center justify-center text-2xl rounded border-2 transition-all
                 ${isSelected ? "border-bingo-highlight bg-bingo-highlight/20" : "border-gray-300"}
                 ${isInBingoLine ? "ring-2 ring-bingo-green-button" : ""}
-                ${isCompleted ? "bg-white/90" : "bg-white"}
+                ${isCompleted ? "bg-[#1097284d]" : "bg-white"}
                 hover:bg-gray-50 active:scale-95
               `}
             >
