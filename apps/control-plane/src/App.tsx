@@ -103,25 +103,27 @@ function App() {
     loadLeaderboard()
   }, [])
 
-  // Set up realtime listener for photo submissions
+  // Keep the photo wall and leaderboard current as submissions arrive.
   useEffect(() => {
     if (!supabase) return
 
     // Load initial photos
     loadPhotos()
 
-    // Subscribe to photo_submissions changes
-    const photosChannel = supabase
-      .channel("photos-realtime")
+    const submissionsChannel = supabase
+      .channel("submissions-realtime")
       .on("postgres_changes", { event: "*", schema: "public", table: "photo_submissions" }, () => {
         loadPhotos()
+        debouncedLoadLeaderboard()
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "bingo_submissions" }, () => {
         debouncedLoadLeaderboard()
       })
       .subscribe()
 
     return () => {
       if (!supabase) return
-      supabase.removeChannel(photosChannel)
+      supabase.removeChannel(submissionsChannel)
       // Clear any pending leaderboard refresh timer
       if (leaderboardTimerRef.current) {
         clearTimeout(leaderboardTimerRef.current)
@@ -207,28 +209,22 @@ function App() {
     try {
       const { data, error } = await supabase
         .from("photo_submissions")
-        .select("user_id, created_at")
+        .select("user_id")
         .order("user_id")
 
       if (error) throw error
 
-      // Group by user, count submissions, and retain the latest photo time.
-      const leaderboardMap = new Map<string, { submissionCount: number; lastPhotoAt: string }>()
+      // Group photo submissions by user.
+      const leaderboardMap = new Map<string, number>()
       data?.forEach((submission) => {
-        const current = leaderboardMap.get(submission.user_id)
-        leaderboardMap.set(submission.user_id, {
-          submissionCount: (current?.submissionCount || 0) + 1,
-          lastPhotoAt:
-            !current || new Date(submission.created_at).getTime() > new Date(current.lastPhotoAt).getTime()
-              ? submission.created_at
-              : current.lastPhotoAt,
-        })
+        const count = leaderboardMap.get(submission.user_id) || 0
+        leaderboardMap.set(submission.user_id, count + 1)
       })
 
-      // Fetch bingo counts
+      // Fetch bingo counts and completion times.
       const { data: bingoData, error: bingoError } = await supabase
         .from("bingo_submissions")
-        .select("user_id")
+        .select("user_id, created_at")
         .order("user_id")
 
       if (bingoError) throw bingoError
@@ -245,11 +241,17 @@ function App() {
 
       const gameStartedAt = gameStateData?.started_at ? new Date(gameStateData.started_at).getTime() : null
 
-      // Group by user_id and count bingos
-      const bingoMap = new Map<string, number>()
+      // Group by user and retain the latest bingo time.
+      const bingoMap = new Map<string, { count: number; lastBingoAt: string }>()
       bingoData?.forEach((submission) => {
-        const count = bingoMap.get(submission.user_id) || 0
-        bingoMap.set(submission.user_id, count + 1)
+        const current = bingoMap.get(submission.user_id)
+        bingoMap.set(submission.user_id, {
+          count: (current?.count || 0) + 1,
+          lastBingoAt:
+            !current || new Date(submission.created_at).getTime() > new Date(current.lastBingoAt).getTime()
+              ? submission.created_at
+              : current.lastBingoAt,
+        })
       })
 
       // Fetch user names
@@ -269,13 +271,14 @@ function App() {
 
       // Convert to array, calculate score, and sort by score
       const leaderboardArray: LeaderboardEntry[] = Array.from(leaderboardMap.entries())
-        .map(([user_id, { submissionCount, lastPhotoAt }]) => {
-          const bingo_count = bingoMap.get(user_id) || 0
+        .map(([user_id, submissionCount]) => {
+          const bingo = bingoMap.get(user_id)
+          const bingo_count = bingo?.count || 0
           const score = submissionCount + bingo_count * 5
           const time_seconds =
-            gameStartedAt === null
+            gameStartedAt === null || !bingo
               ? null
-              : Math.max(0, Math.floor((new Date(lastPhotoAt).getTime() - gameStartedAt) / 1000))
+              : Math.max(0, Math.floor((new Date(bingo.lastBingoAt).getTime() - gameStartedAt) / 1000))
 
           return {
             user_id,
