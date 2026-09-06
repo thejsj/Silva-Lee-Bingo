@@ -10,12 +10,21 @@ type LeaderboardEntry = {
   submission_count: number
   bingo_count: number
   score: number
+  time_seconds: number | null
 }
 type PhotoSubmission = {
   id: string
   user_id: string
   photo_url: string
   created_at: string
+}
+
+const formatElapsedTime = (seconds: number | null) => {
+  if (seconds === null) return "--:--"
+
+  const minutes = Math.floor(seconds / 60)
+  const remainingSeconds = seconds % 60
+  return `${String(minutes).padStart(2, "0")}:${String(remainingSeconds).padStart(2, "0")}`
 }
 
 function App() {
@@ -198,16 +207,22 @@ function App() {
     try {
       const { data, error } = await supabase
         .from("photo_submissions")
-        .select("user_id")
+        .select("user_id, created_at")
         .order("user_id")
 
       if (error) throw error
 
-      // Group by user_id and count submissions
-      const leaderboardMap = new Map<string, number>()
+      // Group by user, count submissions, and retain the latest photo time.
+      const leaderboardMap = new Map<string, { submissionCount: number; lastPhotoAt: string }>()
       data?.forEach((submission) => {
-        const count = leaderboardMap.get(submission.user_id) || 0
-        leaderboardMap.set(submission.user_id, count + 1)
+        const current = leaderboardMap.get(submission.user_id)
+        leaderboardMap.set(submission.user_id, {
+          submissionCount: (current?.submissionCount || 0) + 1,
+          lastPhotoAt:
+            !current || new Date(submission.created_at).getTime() > new Date(current.lastPhotoAt).getTime()
+              ? submission.created_at
+              : current.lastPhotoAt,
+        })
       })
 
       // Fetch bingo counts
@@ -217,6 +232,16 @@ function App() {
         .order("user_id")
 
       if (bingoError) throw bingoError
+
+      const { data: gameStateData, error: gameStateError } = await supabase
+        .from("game_state")
+        .select("started_at")
+        .eq("id", 0)
+        .single()
+
+      if (gameStateError) throw gameStateError
+
+      const gameStartedAt = gameStateData.started_at ? new Date(gameStateData.started_at).getTime() : null
 
       // Group by user_id and count bingos
       const bingoMap = new Map<string, number>()
@@ -242,18 +267,31 @@ function App() {
 
       // Convert to array, calculate score, and sort by score
       const leaderboardArray: LeaderboardEntry[] = Array.from(leaderboardMap.entries())
-        .map(([user_id, submission_count]) => {
+        .map(([user_id, { submissionCount, lastPhotoAt }]) => {
           const bingo_count = bingoMap.get(user_id) || 0
-          const score = submission_count + (bingo_count * 5)
+          const score = submissionCount + bingo_count * 5
+          const time_seconds =
+            gameStartedAt === null
+              ? null
+              : Math.max(0, Math.floor((new Date(lastPhotoAt).getTime() - gameStartedAt) / 1000))
+
           return {
             user_id,
             name: userNameMap.get(user_id) || user_id,
-            submission_count,
+            submission_count: submissionCount,
             bingo_count,
             score,
+            time_seconds,
           }
         })
-        .sort((a, b) => b.score - a.score)
+        .sort((a, b) => {
+          const scoreDifference = b.score - a.score
+          if (scoreDifference !== 0) return scoreDifference
+          if (a.time_seconds === null && b.time_seconds === null) return 0
+          if (a.time_seconds === null) return 1
+          if (b.time_seconds === null) return -1
+          return a.time_seconds - b.time_seconds
+        })
 
       setLeaderboard(leaderboardArray)
     } catch (error) {
@@ -461,6 +499,7 @@ function App() {
                       <span className="w-16 text-center">Bingos</span>
                       <span className="w-16 text-center">Photos</span>
                       <span className="w-16 text-center">Score</span>
+                      <span className="w-16 text-center">Time</span>
                     </div>
                     {/* Leaderboard entries */}
                     {leaderboard.map((entry, index) => (
@@ -471,6 +510,9 @@ function App() {
                         <span className="w-16 text-center text-gray-800">{entry.bingo_count}</span>
                         <span className="w-16 text-center text-gray-600">{entry.submission_count}</span>
                         <span className="w-16 text-center font-bold text-green-600">{entry.score}</span>
+                        <span className="w-16 text-center tabular-nums text-gray-800">
+                          {formatElapsedTime(entry.time_seconds)}
+                        </span>
                       </div>
                     ))}
                   </div>
