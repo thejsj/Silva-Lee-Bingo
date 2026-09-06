@@ -239,9 +239,11 @@ function App() {
         .eq("id", 0)
         .single()
 
-      if (gameStateError) throw gameStateError
+      if (gameStateError) {
+        console.warn("Game start time is unavailable; leaderboard times will be blank:", gameStateError)
+      }
 
-      const gameStartedAt = gameStateData.started_at ? new Date(gameStateData.started_at).getTime() : null
+      const gameStartedAt = gameStateData?.started_at ? new Date(gameStateData.started_at).getTime() : null
 
       // Group by user_id and count bingos
       const bingoMap = new Map<string, number>()
